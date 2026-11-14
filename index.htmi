@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#101114">
+<title>MNNROW 3D — WebGL Runner Studio</title>
+<style>
+:root{--bg:#101114;--panel:#1a1c21;--panel2:#22252c;--line:#343943;--text:#f5f6f7;--muted:#a0a5af;--lime:#b8f477;--lime2:#d9ffa9}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}body{background:radial-gradient(ellipse at 50% -10%,#303b2b 0,#17191d 38%,#101114 75%)}button,input,select{font:inherit}button{cursor:pointer}.shell{max-width:1100px;margin:auto;padding:0 14px 40px}
+header{height:66px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ffffff18}.brand{font-weight:1000;letter-spacing:.17em;font-size:20px}.brand b{color:var(--lime)}.tag{font-size:10px;letter-spacing:.12em;color:#d5d9df;border:1px solid #ffffff25;border-radius:30px;padding:6px 9px}
+nav{display:flex;gap:8px;margin:16px 0}.tab{flex:1;background:#ffffff08;border:1px solid var(--line);color:#c5c9d0;border-radius:11px;padding:11px 8px;font-weight:800;font-size:12px}.tab.active{background:var(--lime);border-color:var(--lime);color:#15190f}
+.page{display:none}.page.active{display:block}.hero{padding:25px 2px 16px}.eyebrow{font-size:10px;color:var(--lime);font-weight:900;letter-spacing:.18em}h1{font-size:clamp(36px,8vw,66px);letter-spacing:-.065em;line-height:.96;margin:9px 0 12px}h1 span{color:var(--lime)}.muted{color:var(--muted)}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.btn{border:0;border-radius:11px;padding:12px 16px;font-weight:900}.primary{background:var(--lime);color:#15190f}.secondary{background:#ffffff0b;border:1px solid var(--line);color:var(--text)}.danger{background:#532b31;color:#ffdce0;border:1px solid #82414a}
+.panel{background:linear-gradient(145deg,#202329,#17191e);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0}.panel h2{font-size:17px;margin:0 0 5px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.small{font-size:12px;color:var(--muted)}.gamebox{position:relative;overflow:hidden;border-radius:16px;border:1px solid #485044;background:#111;touch-action:none}.gamebox canvas{display:block;width:100%;height:auto;aspect-ratio:9/11;max-height:68vh;object-fit:contain}.hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none}.hud span{background:#101114c9;border:1px solid #ffffff25;border-radius:9px;padding:6px 9px;font-weight:900;font-size:12px}.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#080a0ccc;text-align:center;padding:22px}.overlay.hidden{display:none}.overlaybox{max-width:300px}.overlay h2{font-size:29px;line-height:1;margin:0 0 10px}.overlay p{color:#c2c7ce;font-size:13px}.controls{display:flex;justify-content:center;gap:10px;margin-top:10px}.control{width:64px;height:48px;border:1px solid #ffffff24;border-radius:12px;background:#ffffff0c;color:white;font-size:20px;font-weight:900}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field{background:#111318;border:1px solid var(--line);border-radius:12px;padding:11px;min-width:0}.field label{display:block;font-size:11px;color:#b5bbc5;font-weight:800;margin-bottom:7px}.field input[type=color]{width:100%;height:36px;border:0;background:none;padding:0}.field input[type=file]{width:100%;font-size:11px;color:#c8ccd3}.field select{width:100%;background:#101216;color:white;border:1px solid var(--line);border-radius:8px;padding:9px}.preview{height:100px;border:1px dashed #59616e;border-radius:12px;display:grid;place-items:center;background:#101216;overflow:hidden}.preview img{max-width:100%;max-height:100%;object-fit:contain}.filehint{font-size:10px;color:var(--muted);margin-top:6px}.wide{grid-column:1/-1}.version{width:100%;padding:11px;background:#101216;color:white;border:1px solid var(--line);border-radius:10px}.notice{font-size:11px;color:#b4bac4;background:#ffffff08;border:1px solid #ffffff18;border-radius:11px;padding:11px;margin-top:12px}
+footer{border-top:1px solid #ffffff16;padding:16px 2px;color:#858c97;font-size:10px;margin-top:25px}
+@media(min-width:760px){.shell{padding:0 24px 50px}.game-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:16px;align-items:start}.gamebox canvas{aspect-ratio:4/3;max-height:620px}.hero{padding-top:42px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:380px){.shell{padding-left:10px;padding-right:10px}.tab{font-size:11px;padding:10px 3px}.panel{padding:11px}}
+#game3d{width:100%;height:100%;display:block;touch-action:none}.gamebox{height:min(68vh,680px);min-height:390px}.gamebox canvas{aspect-ratio:auto;height:100%;max-height:none}.gamebox:fullscreen{height:100vh;border-radius:0}.gamebox:fullscreen canvas{height:100%}.hud{z-index:2}.overlay{z-index:3}.control:active{background:#b8f477;color:#101114}.status{font-size:12px;color:#b8f477}.field input[type=range]{width:100%}@media(min-width:760px){.gamebox{height:620px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header><div class="brand">MN<b>N</b>ROW</div><div class="tag">RUNNER LAB · MOBILE + PC</div></header>
+<nav aria-label="Navigation">
+<button class="tab active" data-page="play">JOUER</button><button class="tab" data-page="studio">STUDIO</button><button class="tab" data-page="archive">VERSIONS</button>
+</nav>
+
+<section id="play" class="page active">
+<div class="hero"><div class="eyebrow">YOUR RUN. YOUR RULES.</div><h1>RUN THE<br><span>TRACK.</span></h1><p class="muted">Un runner original jouable dans ton navigateur. Glisse, saute, évite les obstacles et ramasse les pièces.</p></div>
+<div class="game-layout">
+<div>
+<div class="gamebox">
+<canvas id="game3d" aria-label="Jeu de course 3D WebGL"></canvas>
+<div class="hud"><span>🪙 <b id="coins">0</b></span><span>SCORE <b id="score">0</b></span><span>⚡ <b id="speed">1.0</b>x</span></div>
+<div class="overlay" id="overlay"><div class="overlaybox"><h2>MNNROW RUN</h2><p>Course 3D WebGL. Glisse pour changer de voie, sauter ou glisser. Sur PC : flèches ou WASD.</p><button class="btn primary" id="start">▶ JOUER</button></div></div>
+</div>
+<div class="controls"><button class="control" data-act="left">←</button><button class="control" data-act="jump">↑</button><button class="control" data-act="slide">↓</button><button class="control" data-act="right">→</button></div>
+</div>
+<div>
+<div class="panel"><h2>Ta partie</h2><p class="small">Le score et les pièces sont comptés pendant la course. Évite les barrières et les trains.</p><div class="row" style="margin-top:12px"><span class="small">Meilleur score</span><b id="best">0</b></div><div class="row" style="margin-top:9px"><span class="small">Pièces de cette partie</span><b id="totalCoins">0</b></div><button class="btn secondary" id="restart" style="width:100%;margin-top:13px">↻ RECOMMENCER</button></div>
+<div class="panel"><h2>Réglages 3D</h2><div class="field"><label for="quality">Qualité graphique</label><select id="quality"><option value="1">Économie (mobile)</option><option value="1.5" selected>Équilibrée</option><option value="2">Élevée</option></select></div><div class="actions"><button class="btn secondary" id="pause">⏸ PAUSE</button><button class="btn secondary" id="fullscreen">⛶ PLEIN ÉCRAN</button></div><p id="webglStatus" class="status" aria-live="polite">Initialisation WebGL…</p></div><div class="panel"><h2>Commandes</h2><p class="small">Mobile : fais glisser ton doigt sur le terrain ou utilise les boutons. Ordinateur : ← → ↑ ↓ ou A / D / W / S.</p></div>
+<div class="notice">Runner 3D indépendant. Les environnements sont originaux ; aucun fichier propriétaire de Subway Surfers n’est inclus.</div>
+</div>
+</div>
+</section>
+
+<section id="studio" class="page">
+<div class="hero"><div class="eyebrow">CUSTOMIZATION LAB</div><h1>YOUR<br><span>LOOK.</span></h1><p class="muted">Importe tes propres images et vois-les dans le jeu. Les personnalisations restent enregistrées sur cet appareil.</p></div>
+<div class="panel"><h2>Importer un modèle 3D autorisé</h2><p class="small">Importe un personnage au format .glb dont tu possèdes les droits. Le modèle reste sur cet appareil pour cette session. Les fichiers 3D ne sont pas automatiquement sauvegardés.</p><input type="file" id="modelFile" accept=".glb,model/gltf-binary"><p id="modelStatus" class="small"></p></div><div class="panel"><h2>Personnage</h2><div class="grid">
+<div class="field"><label for="charFile">Texture / image (PNG, JPG, WebP)</label><input id="charFile" type="file" accept="image/png,image/jpeg,image/webp"><div class="filehint">Image affichée sur ton coureur.</div></div>
+<div class="field"><label>Aperçu</label><div class="preview"><img id="charPreview" alt="Aperçu personnage" hidden><span id="charEmpty" class="small">Aucune image</span></div></div>
+<div class="field"><label for="charColor">Couleur du personnage</label><input id="charColor" type="color" value="#b8f477"></div>
+<div class="field"><label for="boardColor">Couleur du hoverboard</label><input id="boardColor" type="color" value="#65d9ff"></div>
+</div></div>
+<div class="panel"><h2>Pièces</h2><div class="grid">
+<div class="field"><label for="coinFile">Image de pièce (PNG, JPG, WebP)</label><input id="coinFile" type="file" accept="image/png,image/jpeg,image/webp"><div class="filehint">Remplace l'apparence des pièces ramassées.</div></div>
+<div class="field"><label>Aperçu</label><div class="preview"><img id="coinPreview" alt="Aperçu pièce" hidden><span id="coinEmpty" class="small">Aucune image</span></div></div>
+</div></div>
+<div class="panel"><h2>Hoverboard</h2><div class="grid">
+<div class="field"><label for="boardFile">Image de hoverboard (PNG, JPG, WebP)</label><input id="boardFile" type="file" accept="image/png,image/jpeg,image/webp"><div class="filehint">Image décorative utilisée sous le coureur.</div></div>
+<div class="field"><label>Aperçu</label><div class="preview"><img id="boardPreview" alt="Aperçu hoverboard" hidden><span id="boardEmpty" class="small">Aucune image</span></div></div>
+</div></div>
+<div class="actions"><button class="btn primary" id="save">SAUVEGARDER</button><button class="btn secondary" id="reset">RÉINITIALISER</button></div>
+<p id="saveMsg" class="small" aria-live="polite"></p>
+</section>
+
+<section id="archive" class="page">
+<div class="hero"><div class="eyebrow">VERSION SELECTOR</div><h1>GAME<br><span>ARCHIVE.</span></h1><p class="muted">Sélectionne le profil du jeu MNNROW. Les anciennes versions officielles ne sont pas fournies ici.</p></div>
+<div class="panel"><h2>Cartes originales</h2><select id="mapSelect" class="version"><option value="city">Neon City</option><option value="sunset">Sunset Rails</option><option value="forest">Emerald Forest</option></select><p class="small">Les trois environnements changent réellement la scène 3D.</p></div><div class="panel"><h2>Versions MNNROW</h2><p class="small">Chaque profil peut avoir ses propres réglages de jeu. Les numéros ci-dessous sont les versions de MNNROW, pas des copies des anciennes versions Subway Surfers.</p>
+<select id="versionSelect" class="version" style="margin-top:12px"><option value="classic">1.0 — Classic Run</option><option value="fast">1.1 — Speed Rush</option><option value="zen">1.2 — Zen Run</option></select>
+<div class="notice" id="versionInfo">Classic Run : vitesse standard.</div></div>
+</section>
+<footer>MNNROW · Projet indépendant non officiel. Les fichiers importés restent dans le stockage local de ce navigateur. N'importe que des ressources que tu as le droit d'utiliser.</footer>
+</div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+(()=>{
+ const $=id=>document.getElementById(id);
+ const canvas=$('game3d');
+ const config={charColor:'#b8f477',boardColor:'#65d9ff',charImage:'',coinImage:'',boardImage:''};
+ try{Object.assign(config,JSON.parse(localStorage.getItem('mnnrow_custom')||'{}'))}catch{}
+ $('charColor').value=config.charColor;$('boardColor').value=config.boardColor;
+ const previews={};
+ function setImage(type,data){const img=new Image();img.onload=()=>{previews[type]=img;const el=$(type+'Preview');el.src=data;el.hidden=false;$(type+'Empty').hidden=true;};img.src=data}
+ for(const type of ['char','coin','board'])if(config[type+'Image'])setImage(type,config[type+'Image']);
+ function fileToData(file,type){if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>1024*1024){$('saveMsg').textContent='Image PNG/JPG/WebP de 1 Mo maximum.';return}const reader=new FileReader();reader.onload=()=>{config[type+'Image']=reader.result;setImage(type,reader.result)};reader.readAsDataURL(file)}
+ for(const type of ['char','coin','board'])$(type+'File').onchange=e=>fileToData(e.target.files[0],type);
+ $('charColor').oninput=e=>{config.charColor=e.target.value;updateColors()};$('boardColor').oninput=e=>{config.boardColor=e.target.value;updateColors()};
+ $('save').onclick=()=>{try{localStorage.setItem('mnnrow_custom',JSON.stringify(config));$('saveMsg').textContent='✓ Personnalisations enregistrées.'}catch{$('saveMsg').textContent='Stockage insuffisant. Utilise des images plus petites.'}};
+ $('reset').onclick=()=>{if(confirm('Réinitialiser les personnalisations ?')){localStorage.removeItem('mnnrow_custom');location.reload()}};
+ document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===b.dataset.page));resize()});
+ const themes={city:{sky:0x111e38,ground:0x263142,rail:0x899cae,building:0x334967,light:0x61d6ff},sunset:{sky:0x754a59,ground:0x76584b,rail:0xffc991,building:0x9b6960,light:0xffc16a},forest:{sky:0x233c36,ground:0x284c37,rail:0x93ba9b,building:0x3e6b50,light:0xb8f477}};
+ let theme='city',mode='classic',running=false,paused=false,score=0,coins=0,best=Number(localStorage.getItem('mnnrow_best')||0),elapsed=0,spawnClock=0,lane=1,targetX=0,jumpTime=0,slideTime=0,invincible=0,last=0,entities=[],decor=[],customModel=null;
+ $('best').textContent=best;
+ let renderer,scene,camera,player,bodyMat,boardMat,ambient,light,trackMat,groundMat,railMat;
+ const clockSpeed=()=>mode==='fast'?1.45:mode==='zen'?.8:1;
+ const geometry=(type,...args)=>new THREE[type](...args);
+ function mesh(g,color){return new THREE.Mesh(g,new THREE.MeshStandardMaterial({color,roughness:.75,metalness:.08}))}
+ function addBox(parent,w,h,d,color,x=0,y=0,z=0){const m=mesh(new THREE.BoxGeometry(w,h,d),color);m.position.set(x,y,z);parent.add(m);return m}
+ function createWorld(){
+  scene=new THREE.Scene();scene.fog=new THREE.Fog(0x111e38,28,115);
+  camera=new THREE.PerspectiveCamera(65,1,.1,180);camera.position.set(0,5.6,10.8);camera.lookAt(0,1,-15);
+  renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false,powerPreference:'high-performance'});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
+  ambient=new THREE.HemisphereLight(0xffffff,0x34404d,2);scene.add(ambient);
+  light=new THREE.DirectionalLight(0xffffff,2.4);light.position.set(-5,13,7);scene.add(light);
+  groundMat=new THREE.MeshStandardMaterial({color:0x263142});trackMat=new THREE.MeshStandardMaterial({color:0x293038});railMat=new THREE.MeshStandardMaterial({color:0x899cae,metalness:.6,roughness:.35});
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,220),groundMat);ground.rotation.x=-Math.PI/2;ground.position.y=-.15;scene.add(ground);
+  for(let i=-1;i<=1;i++){
+   const x=i*2.6;
+   const bed=new THREE.Mesh(new THREE.BoxGeometry(2.5,.18,140),trackMat);bed.position.set(x,0,-55);scene.add(bed);
+   for(const offset of [-.68,.68]){const rail=new THREE.Mesh(new THREE.BoxGeometry(.11,.13,140),railMat);rail.position.set(x+offset,.18,-55);scene.add(rail)}
+  }
+  for(let i=0;i<24;i++){const tie=addBox(scene,8.1,.1,.2,0x705b50,0,.05,-i*4.5+6);decor.push({mesh:tie,kind:'tie'})}
+  for(let i=0;i<36;i++){
+   const side=i%2===0?-1:1,x=side*(6+(i%3)*2),z=8-Math.floor(i/2)*7;
+   const height=3+(i*7%9);const b=addBox(scene,2.4,height,3,0x334967,x,height/2-.15,z);decor.push({mesh:b,kind:'building'});
+   if(i%4===0){const lamp=mesh(new THREE.SphereGeometry(.2,8,6),0x61d6ff);lamp.position.set(side*4.9,3.1,z);scene.add(lamp);decor.push({mesh:lamp,kind:'lamp'})}
+  }
+  player=new THREE.Group();scene.add(player);player.position.set(0,0,3.5);
+  boardMat=new THREE.MeshStandardMaterial({color:config.boardColor,emissive:config.boardColor,emissiveIntensity:.18});
+  bodyMat=new THREE.MeshStandardMaterial({color:config.charColor});
+  const board=new THREE.Mesh(new THREE.BoxGeometry(1.05,.12,1.65),boardMat);board.position.y=.22;player.add(board);
+  const torso=new THREE.Mesh(new THREE.BoxGeometry(.75,1.1,.44),bodyMat);torso.position.y=1.37;player.add(torso);
+  const head=mesh(new THREE.SphereGeometry(.34,12,8),0xffd3a8);head.position.y=2.18;player.add(head);
+  for(const x of [-.24,.24]){addBox(player,.22,.66,.3,0xeeeeff,x,.53,0);addBox(player,.2,.78,.25,config.charColor,x*2,1.36,0)}
+  applyTheme();resize();$('webglStatus').textContent='✓ WebGL 3D activé';
+ }
+ function updateColors(){if(bodyMat)bodyMat.color.set(config.charColor);if(boardMat){boardMat.color.set(config.boardColor);boardMat.emissive.set(config.boardColor)}}
+ function applyTheme(){if(!scene)return;const t=themes[theme];scene.background=new THREE.Color(t.sky);scene.fog.color.set(t.sky);groundMat.color.set(t.ground);railMat.color.set(t.rail);for(const d of decor){if(d.kind==='building')d.mesh.material.color.set(t.building);if(d.kind==='lamp')d.mesh.material.color.set(t.light)}}
+ $('mapSelect').onchange=e=>{theme=e.target.value;applyTheme()};
+ $('versionSelect').onchange=e=>{mode=e.target.value;$('versionInfo').textContent={classic:'Classic Run : vitesse standard.',fast:'Speed Rush : course plus rapide.',zen:'Zen Run : rythme plus tranquille.'}[mode]};
+ function resize(){if(!renderer)return;const rect=canvas.getBoundingClientRect();const w=Math.max(1,rect.width),h=Math.max(1,rect.height);camera.aspect=w/h;camera.fov=w/h<.8?72:65;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}
+ window.addEventListener('resize',resize);$('quality').onchange=e=>{if(renderer){renderer.setPixelRatio(Math.min(devicePixelRatio,Number(e.target.value)));resize()}};
+ $('fullscreen').onclick=()=>{const box=document.querySelector('.gamebox');if(document.fullscreenElement)document.exitFullscreen?.();else box.requestFullscreen?.();};document.addEventListener('fullscreenchange',()=>setTimeout(resize,100));
+ function entity(type,l,z){const root=new THREE.Group();root.position.set((l-1)*2.6,0,z);let collider=type;
+  if(type==='coin'){const m=mesh(new THREE.TorusGeometry(.35,.13,7,12),0xffd54c);m.position.y=1.3;m.rotation.y=.4;root.add(m)}
+  else if(type==='barrier'){addBox(root,1.7,.9,.32,0xffa640,0,.65,0);addBox(root,1.8,.13,.38,0xffffff,0,1,0)}
+  else if(type==='arch'){for(const x of [-.8,.8])addBox(root,.18,2.8,.3,0xff6b79,x,1.4,0);addBox(root,1.8,.45,.4,0xff6b79,0,2.6,0)}
+  else {addBox(root,1.9,2.7,5,0x617e91,0,1.4,0);addBox(root,1.45,.75,.06,0x9edce6,0,1.92,2.53);addBox(root,1.5,.22,.1,0xffd24a,0,.53,2.55)}
+  scene.add(root);entities.push({type:collider,l,z,root,done:false});
+ }
+ function spawnRow(){const l=Math.floor(Math.random()*3),r=Math.random();if(r<.52){entity('coin',l,-75);if(Math.random()<.6)entity('coin',l,-81)}else entity(r<.73?'barrier':r<.87?'arch':'train',l,-75);if(Math.random()<.45)entity('coin',(l+1+Math.floor(Math.random()*2))%3,-78)}
+ function clearEntities(){for(const o of entities){scene.remove(o.root);o.root.traverse(x=>{x.geometry?.dispose();if(x.material && x.material!==bodyMat && x.material!==boardMat)x.material.dispose?.()})}entities=[]}
+ function overlay(title,description,label,callback){const el=$('overlay');el.classList.remove('hidden');el.replaceChildren();const b=document.createElement('div');b.className='overlaybox';const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=description;const btn=document.createElement('button');btn.className='btn primary';btn.textContent=label;btn.onclick=callback;b.append(h,p,btn);el.append(b)}
+ function start(){clearEntities();running=true;paused=false;score=0;coins=0;elapsed=0;spawnClock=.4;lane=1;targetX=0;jumpTime=0;slideTime=0;invincible=0;player.position.set(0,0,3.5);player.scale.y=1;$('overlay').classList.add('hidden');$('pause').textContent='⏸ PAUSE';updateHUD()}
+ function finish(){running=false;best=Math.max(best,Math.floor(score));try{localStorage.setItem('mnnrow_best',best)}catch{}$('best').textContent=best;overlay('FIN DE PARTIE',`Score : ${Math.floor(score)} · Pièces : ${coins}`,'↻ REJOUER',start)}
+ function updateHUD(){$('score').textContent=Math.floor(score);$('coins').textContent=coins;$('totalCoins').textContent=coins;$('speed').textContent=(clockSpeed()*(1+Math.min(elapsed/160,.7))).toFixed(1)}
+ function act(a){if(!running||paused)return;if(a==='left')lane=Math.max(0,lane-1);if(a==='right')lane=Math.min(2,lane+1);if(a==='jump'&&jumpTime<=0){jumpTime=.9;slideTime=0}if(a==='slide'&&jumpTime<=0)slideTime=.75;targetX=(lane-1)*2.6}
+ function update(dt){if(!running||paused)return;elapsed+=dt;score+=dt*14*clockSpeed();spawnClock-=dt;const v=(20+Math.min(elapsed*.15,12))*clockSpeed();if(spawnClock<=0){spawnRow();spawnClock=Math.max(.67,1.35-elapsed*.003)/clockSpeed()}
+  jumpTime=Math.max(0,jumpTime-dt);slideTime=Math.max(0,slideTime-dt);invincible=Math.max(0,invincible-dt);
+  const jumpHeight=jumpTime>0?Math.sin((1-jumpTime/.9)*Math.PI)*1.65:0;player.position.x+=(targetX-player.position.x)*Math.min(1,dt*14);player.position.y=jumpHeight;player.scale.y+=( (slideTime>0?.53:1)-player.scale.y)*Math.min(1,dt*16);
+  for(const d of decor){if(d.kind==='tie'){d.mesh.position.z+=v*dt;if(d.mesh.position.z>10)d.mesh.position.z-=108}}
+  for(const o of entities){o.z+=v*dt;o.root.position.z=o.z;if(o.type==='coin')o.root.rotation.y+=dt*3;if(!o.done&&o.z>2.1&&o.z<4.9&&o.l===lane){o.done=true;if(o.type==='coin'){coins++;score+=20;o.root.visible=false}else if(o.type==='barrier'&&jumpHeight>1.05){}else if(o.type==='arch'&&slideTime>0){}else if(invincible<=0){finish();break}}}
+  for(let i=entities.length-1;i>=0;i--){const o=entities[i];if(o.z>15){scene.remove(o.root);o.root.traverse(x=>{x.geometry?.dispose();x.material?.dispose?.()});entities.splice(i,1)}}updateHUD();
+ }
+ function loop(t){const dt=Math.min(.05,Math.max(0,(t-last)/1000||0));last=t;update(dt);if(player){player.rotation.z=Math.sin(t*.004)*.025;camera.position.x+=(player.position.x*.18-camera.position.x)*Math.min(1,dt*2.5);camera.lookAt(player.position.x*.28,1,-12);renderer.render(scene,camera)}requestAnimationFrame(loop)}
+ $('pause').onclick=()=>{if(!running)return;paused=!paused;$('pause').textContent=paused?'▶ REPRENDRE':'⏸ PAUSE';if(paused)overlay('PAUSE','Ta course est en pause.','▶ REPRENDRE',()=>{$('pause').click();$('overlay').classList.add('hidden')});else $('overlay').classList.add('hidden')};
+ $('start').onclick=start;$('restart').onclick=start;
+ document.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();act(b.dataset.act)}));
+ let sx=0,sy=0;canvas.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;canvas.setPointerCapture(e.pointerId)});canvas.addEventListener('pointerup',e=>{const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.max(Math.abs(dx),Math.abs(dy))<25)return;if(Math.abs(dx)>Math.abs(dy))act(dx>0?'right':'left');else act(dy<0?'jump':'slide')});
+ window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowleft','arrowright','arrowup','arrowdown',' '].includes(k))e.preventDefault();if(k==='arrowleft'||k==='a')act('left');if(k==='arrowright'||k==='d')act('right');if(k==='arrowup'||k==='w'||k===' ')act('jump');if(k==='arrowdown'||k==='s')act('slide');if(k==='p')$('pause').click()});
+ $('modelFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(!file.name.toLowerCase().endsWith('.glb')||file.size>15*1024*1024){$('modelStatus').textContent='Fichier .glb de 15 Mo maximum.';return}const url=URL.createObjectURL(file);$('modelStatus').textContent='Chargement du modèle…';try{const gltf=await new GLTFLoader().loadAsync(url);if(customModel){player.remove(customModel)}customModel=gltf.scene;const box=new THREE.Box3().setFromObject(customModel);const size=box.getSize(new THREE.Vector3());const center=box.getCenter(new THREE.Vector3());const scale=2.1/Math.max(size.x,size.y,size.z,.001);customModel.scale.setScalar(scale);customModel.position.set(-center.x*scale,.3-box.min.y*scale,-center.z*scale);for(const c of [...player.children])c.visible=false;player.add(customModel);$('modelStatus').textContent='✓ Modèle 3D chargé pour cette session.'}catch(err){$('modelStatus').textContent='Impossible de lire ce modèle GLB.'}finally{URL.revokeObjectURL(url)}};
+ try{createWorld();requestAnimationFrame(loop)}catch(err){$('webglStatus').textContent='WebGL indisponible sur ce navigateur : '+err.message;overlay('WEBGL INDISPONIBLE','Active l’accélération graphique ou essaie un navigateur compatible.','RÉESSAYER',()=>location.reload())}
+
+})();
+</script>
+</body>
+</html>
