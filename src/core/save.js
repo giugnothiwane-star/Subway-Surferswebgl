@@ -3,6 +3,7 @@
 // des valeurs par défaut, jamais acceptée telle quelle.
 import { BOARDS, CHARACTERS, COIN_SKINS, MISSION_POOL, VERSIONS } from '../data/catalog.js';
 import { MAPS } from '../data/maps.js';
+import { cloneDefaults, validateKeys } from '../gameplay/keymap.js';
 
 export const SAVE_VERSION = 1;
 
@@ -21,7 +22,7 @@ export function defaultSave() {
     missions: { level: 1, active: [], completedTotal: 0 },
     settings: {
       quality: 'auto', shadows: null, reducedMotion: false, touchButtons: true, showFps: false,
-      master: 0.8, music: 0.6, sfx: 0.8, muted: false, swipeSensitivity: 1, vibrate: true, autoFullscreen: false,
+      master: 0.8, music: 0.6, sfx: 0.8, muted: false, swipeSensitivity: 1, vibrate: true, autoFullscreen: false, saturation: 1, keys: cloneDefaults(),
     },
     studio: {
       coinTint: null,
@@ -107,6 +108,8 @@ export function validateSave(input) {
     o.swipeSensitivity = num(s.swipeSensitivity, 1, 0.5, 2);
     o.vibrate = bool(s.vibrate, true);
     o.autoFullscreen = bool(s.autoFullscreen, false);
+    o.saturation = num(s.saturation, 1, 0, 2);
+    o.keys = validateKeys(s.keys);
   }
   if (isObj(input.studio)) {
     const s = input.studio;

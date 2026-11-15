@@ -86,7 +86,8 @@ async function main() {
   await game.init();
   ui.boot(0.8, 'Restauration des personnalisations…');
   await restoreCustomFiles(game, storage);
-  const controls = new Controls(document.getElementById('gesture'), (a) => game.input(a), { sensitivity: storage.data.settings.swipeSensitivity });
+  const controls = new Controls(document.getElementById('gesture'), (a) => game.input(a), { sensitivity: storage.data.settings.swipeSensitivity, keys: storage.data.settings.keys });
+  game.setSaturation(storage.data.settings.saturation);
   controls.bindButtons(document.getElementById('hud'));
   game.controls = controls;
   ui.boot(1, 'Prêt !');

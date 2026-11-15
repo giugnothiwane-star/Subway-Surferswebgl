@@ -118,6 +118,7 @@
           <select id="s-shadows"><option value="auto">Selon le profil</option><option value="on">Activées</option><option value="off">Désactivées</option></select>
         </label>
         <p class="muted small" id="s-perf">—</p>
+        <label class="field">Saturation des couleurs : <b id="s-satval">100 %</b> <input type="range" id="s-saturation" min="0" max="2" step="0.05" /></label>
         <label class="toggle"><input type="checkbox" id="s-reduced" /> Réduire les mouvements de caméra</label>
         <label class="toggle"><input type="checkbox" id="s-fps" /> Afficher les FPS</label>
         <h3>Commandes</h3>
@@ -125,7 +126,11 @@
         <label class="toggle"><input type="checkbox" id="s-vibrate" /> Vibrations (mobile)</label>
         <label class="toggle"><input type="checkbox" id="s-autofs" /> Plein écran automatique en jouant (mobile)</label>
         <label class="field">Sensibilité des glissements <input type="range" id="s-swipe" min="0.5" max="2" step="0.1" /></label>
-        <p class="muted small">PC : ← → / A D (Q D), ↑ / W (Z) / Espace, ↓ / S, E = hoverboard, Échap = pause. Mobile : glisse dans les 4 directions, double tap = hoverboard.</p>
+        <p class="muted small">Mobile : glisse dans les 4 directions, double tap = hoverboard.</p>
+        <h3>Touches du clavier (PC)</h3>
+        <p class="muted small">Touche un emplacement puis appuie sur la nouvelle touche (Échap pour annuler). Une touche déjà utilisée est retirée de son ancienne action.</p>
+        <div id="s-keys" class="keys"></div>
+        <button class="btn small ghost" id="s-keysreset">Touches par défaut</button>
         <h3>Audio</h3>
         <label class="field">Volume général <input type="range" id="s-master" min="0" max="1" step="0.05" /></label>
         <label class="field">Musique <input type="range" id="s-music" min="0" max="1" step="0.05" /></label>

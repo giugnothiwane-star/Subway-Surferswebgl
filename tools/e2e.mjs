@@ -235,6 +235,31 @@ await check('15. Changement de version (Winter Update -> carte imposée)', async
   return 'snow chargée, édition « en développement » non sélectionnable';
 });
 
+await check('Paramètres : changer une touche et la saturation (200 %), conservés après rechargement', async () => {
+  await page.click('[data-nav="settings"]');
+  await page.locator('#s-keys .keybtn[data-action="left"][data-slot="1"]').click();
+  await page.keyboard.press('k');
+  const label = (await page.locator('#s-keys .keybtn[data-action="left"][data-slot="1"]').textContent()).trim();
+  await page.evaluate(() => { const r = document.getElementById('s-saturation'); r.value = '2'; r.dispatchEvent(new Event('input', { bubbles: true })); });
+  const filter = await page.evaluate(() => document.getElementById('scene').style.filter);
+  await page.click('#settings [data-nav="back"]');
+  await page.reload();
+  await waitFor(() => window.__MNNROW && document.getElementById('menu').classList.contains('active'), null, 120000);
+  const after = await game(() => ({ left: window.__MNNROW.game.save.settings.keys.left, sat: window.__MNNROW.game.save.settings.saturation, filter: document.getElementById('scene').style.filter }));
+  // la nouvelle touche fonctionne en course
+  await game(() => { const g = window.__MNNROW.game; g.save.selected.mode = 'zen'; g.startRun('KEYS'); });
+  await waitFor(() => window.__MNNROW.info().state === 'playing', null, 10000);
+  const lc0 = await game(() => window.__MNNROW.game.sim.stats.laneChanges);
+  await page.keyboard.press('k');
+  await waitFor((lc0) => window.__MNNROW.game.sim.stats.laneChanges > lc0, lc0, 5000).catch(() => {});
+  const r = await game(() => ({ lc: window.__MNNROW.game.sim.stats.laneChanges, tl: window.__MNNROW.game.sim.targetLane }));
+  await game(() => { const g = window.__MNNROW.game; g.quitToMenu(); g.save.selected.mode = 'standard'; g.save.settings.saturation = 1; g.setSaturation(1); g.storage.save(); });
+  assert(label === 'K' && filter === 'saturate(2)', `${label} / ${filter}`);
+  assert(after.left.includes('k') && after.sat === 2 && after.filter === 'saturate(2)', JSON.stringify(after));
+  assert(r.lc === lc0 + 1 && r.tl === -1, JSON.stringify(r));
+  return `touche K -> gauche (fonctionne en course), saturation 200 % conservée`;
+});
+
 await check('16/17. Sauvegarde et rechargement', async () => {
   await page.click('[data-nav="settings"]');
   await page.check('#s-reduced');

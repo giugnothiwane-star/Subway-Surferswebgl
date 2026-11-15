@@ -531,6 +531,12 @@ export class Game {
     this.ui.contextLost(false);
   }
 
+  // Saturation des couleurs du jeu (0 à 200 %), appliquée au rendu 3D.
+  setSaturation(x) {
+    const v = Math.max(0, Math.min(2, Number(x) || 1));
+    this.canvas.style.filter = Math.abs(v - 1) < 0.001 ? '' : `saturate(${v})`;
+  }
+
   setReducedMotion(on) {
     this.rig.reduced = on;
   }

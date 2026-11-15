@@ -1,3 +1,5 @@
+import { DEFAULT_KEYS, actionFor } from './keymap.js';
+
 // Commandes PC (clavier) et mobile (swipes en Pointer Events, double tap,
 // boutons tactiles). Les gestes ne font pas défiler la page et les touches
 // sont ignorées pendant la saisie dans un champ.
@@ -7,6 +9,8 @@ export class Controls {
     this.onAction = onAction;
     this.enabled = false;
     this.sensitivity = opts.sensitivity ?? 1;
+    this.keys = opts.keys || DEFAULT_KEYS; // touches configurables (Paramètres)
+    this.capturing = false; // vrai pendant le choix d'une nouvelle touche
     this.pointers = new Map();
     this.lastTap = 0;
     this._key = (e) => this.onKey(e);
@@ -28,15 +32,8 @@ export class Controls {
   }
 
   onKey(e) {
-    if (Controls.isTyping(e.target)) return;
-    const k = e.key.toLowerCase();
-    let action = null;
-    if (k === 'arrowleft' || k === 'a' || k === 'q') action = 'left';
-    else if (k === 'arrowright' || k === 'd') action = 'right';
-    else if (k === 'arrowup' || k === 'w' || k === 'z' || k === ' ') action = 'jump';
-    else if (k === 'arrowdown' || k === 's') action = 'roll';
-    else if (k === 'e' || k === 'b' || k === 'shift') action = 'board';
-    else if (k === 'escape' || k === 'p') action = 'pause';
+    if (this.capturing || Controls.isTyping(e.target)) return;
+    const action = actionFor(this.keys, e.key);
     if (!action) return;
     if (this.enabled || action === 'pause') e.preventDefault();
     if (e.repeat) return; // pas de double action en maintenant la touche

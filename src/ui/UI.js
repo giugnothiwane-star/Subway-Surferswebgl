@@ -7,6 +7,7 @@ import { missionDef } from '../gameplay/Missions.js';
 import { ensureMissions } from '../gameplay/Missions.js';
 import { HAIR_STYLES, ACCESSORIES } from '../models/Character.js';
 import { AssetDB } from '../core/Storage.js';
+import { ACTIONS, SLOTS, bindKey, cloneDefaults, keyLabel } from '../gameplay/keymap.js';
 
 const $ = (id) => document.getElementById(id);
 function h(tag, props = {}, ...children) {
@@ -119,7 +120,7 @@ export class UI {
       case 'restart': g.startRun(); return;
       case 'replayseed': g.startRun(g.seed); return;
       case 'quit': g.quitToMenu(); return;
-      case 'back': this.showScreen(this.prev === 'pause' ? 'pause' : 'menu'); return;
+      case 'back': this.stopCapture?.(); this.showScreen(this.prev === 'pause' ? 'pause' : 'menu'); return;
       case 'studio': this.openStudio(); return;
       case 'studio-exit': this.closeStudio(); return;
       case 'menu': g.menuAnim = 'menu'; g.applyCharacter(); g.applyBoard(); this.showScreen('menu'); return;
@@ -327,6 +328,9 @@ export class UI {
     $('s-reduced').checked = st.reducedMotion;
     $('s-fps').checked = st.showFps;
     $('s-touch').checked = st.touchButtons;
+    $('s-saturation').value = st.saturation;
+    $('s-satval').textContent = `${Math.round(st.saturation * 100)} %`;
+    this.renderKeys();
     $('s-vibrate').checked = st.vibrate;
     $('s-autofs').checked = st.autoFullscreen;
     $('s-swipe').value = st.swipeSensitivity;
@@ -360,6 +364,20 @@ export class UI {
     $('s-reduced').addEventListener('change', (e) => { st().reducedMotion = e.target.checked; this.game.setReducedMotion(e.target.checked); persist(); });
     $('s-fps').addEventListener('change', (e) => { st().showFps = e.target.checked; this.applyBodyClasses(); persist(); });
     $('s-touch').addEventListener('change', (e) => { st().touchButtons = e.target.checked; this.applyBodyClasses(); persist(); });
+    $('s-saturation').addEventListener('input', (e) => {
+      st().saturation = Number(e.target.value);
+      $('s-satval').textContent = `${Math.round(st().saturation * 100)} %`;
+      this.game.setSaturation(st().saturation);
+      persist();
+    });
+    $('s-keysreset').addEventListener('click', () => {
+      this.click();
+      st().keys = cloneDefaults();
+      if (this.game.controls) this.game.controls.keys = st().keys;
+      persist();
+      this.renderKeys();
+      this.toast('Touches par défaut rétablies');
+    });
     $('s-vibrate').addEventListener('change', (e) => { st().vibrate = e.target.checked; persist(); if (e.target.checked) this.vibrate(30); });
     $('s-autofs').addEventListener('change', (e) => { st().autoFullscreen = e.target.checked; persist(); });
     $('s-swipe').addEventListener('input', (e) => { st().swipeSensitivity = Number(e.target.value); if (this.game.controls) this.game.controls.sensitivity = st().swipeSensitivity; persist(); });
@@ -378,6 +396,51 @@ export class UI {
       try { await AssetDB.clear(); } catch { /* IndexedDB indisponible */ }
       location.reload();
     });
+  }
+
+  // ---- touches configurables ----------------------------------------------------------
+  renderKeys() {
+    const keys = this.save.settings.keys;
+    $('s-keys').replaceChildren(...ACTIONS.map(([action, label]) => h('div', { class: 'keyrow' },
+      h('span', { text: label }),
+      ...Array.from({ length: SLOTS }, (_, i) => h('button', {
+        class: `keybtn${keys[action][i] ? '' : ' empty'}`,
+        'data-action': action,
+        'data-slot': String(i),
+        'aria-label': `${label}, touche ${i + 1} : ${keyLabel(keys[action][i])}`,
+        text: keyLabel(keys[action][i]),
+        onclick: (e) => this.captureKey(action, i, e.currentTarget),
+      })))));
+  }
+
+  captureKey(action, slot, btn) {
+    this.click();
+    const ctl = this.game.controls;
+    this.stopCapture?.();
+    btn.classList.add('wait');
+    btn.textContent = 'Appuie…';
+    if (ctl) ctl.capturing = true;
+    const onKey = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === 'Escape') return finish(); // Échap annule (elle reste la touche Pause par défaut)
+      const keys = this.save.settings.keys;
+      const r = bindKey(keys, action, slot, e.key);
+      if (!r.ok) this.toast(r.reason, 'warn');
+      else {
+        if (r.movedFrom) this.toast(`« ${keyLabel(e.key.toLowerCase())} » retirée de « ${ACTIONS.find((a) => a[0] === r.movedFrom)[1]} »`);
+        this.storage.save();
+      }
+      finish();
+    };
+    const finish = () => {
+      window.removeEventListener('keydown', onKey, true);
+      setTimeout(() => { if (ctl) ctl.capturing = false; }, 0);
+      this.stopCapture = null;
+      this.renderKeys();
+    };
+    this.stopCapture = finish;
+    window.addEventListener('keydown', onKey, true);
   }
 
   // ---- studio --------------------------------------------------------------------

@@ -110,6 +110,7 @@ h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.12em; color: 
 #versions, #missions, #settings, #maps { height: calc(100% - 64px - var(--sat)); }
 .subbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; position: sticky; top: -12px; padding: 4px 0 8px; background: inherit; z-index: 2; flex-wrap: wrap; }
 .subbar h2 { font-size: 20px; flex: 1; min-width: 0; }
+.panel-screen .subbar { background: var(--panel-solid); margin: -12px -14px 10px; padding: 12px 14px 10px; top: -12px; box-shadow: 0 6px 12px rgba(0,0,0,.25); }
 .back { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.06); font-size: 24px; line-height: 1; font-weight: 900; }
 .notice { background: rgba(62,197,255,.1); border: 1px solid rgba(62,197,255,.35); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
 
@@ -158,6 +159,14 @@ input[type=color] { width: 100%; height: 36px; border: 1px solid var(--line); bo
 .colors label { font-size: 11.5px; font-weight: 700; color: var(--muted); display: grid; gap: 4px; }
 .checks { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .checks label { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; }
+
+/* Paramètres : touches */
+.keys { display: grid; gap: 6px; }
+.keyrow { display: grid; grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.keyrow span { font-size: 13px; font-weight: 700; color: #d6dbe2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.keybtn { min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,.06); font-weight: 800; font-size: 13px; padding: 4px; }
+.keybtn.empty { color: var(--muted); }
+.keybtn.wait { background: var(--lime); color: #11170a; animation: pulse .6s infinite alternate; }
 
 /* Studio : textures de pièces */
 .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin: 6px 0 10px; }
