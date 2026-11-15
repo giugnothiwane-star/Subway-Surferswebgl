@@ -111,6 +111,25 @@ Ces correctifs s'ajoutent aux améliorations de la même session :
 
 Résultat : **25/25 tests Node** et **28/28 vérifications navigateur**.
 
+### Moteur de skins (Galaxie)
+
+Le registre complet des bugs se trouve dans [`BUGS.md`](BUGS.md).
+
+- **Tests Node** (`tests/skins.test.js`) :
+  - Galaxie complète : le `SkinnedMesh` est conservé et la restauration est exacte ;
+  - mode Vêtements ;
+  - bouton Galaxie sans les trains ;
+  - validation de la sauvegarde.
+- **Test navigateur** : équipement complet en Galaxie, trains intacts (12 matériaux), conservé après changement de carte et rechargement.
+- **Scènes de contrôle avec captures** : les 10 objets du chapitre 23, les 12 skins, les images de pièces (rectangulaire, transparente, contenir, couvrir, zoom, rotation, dos lisible) et la qualité LOW.
+- **Cape en course** : 14 échantillons pendant sauts et roulades, sans valeur NaN, toujours attachée.
+
+### Chrono et textures (15 novembre 2026)
+
+- Un seul chrono (MM:SS.cc), police Orbitron, case arrondie à bord dégradé ; rouge et figé à la chute, repris en grand sur l'écran de fin.
+- Textures du décor refaites en 512 px avec relief : façades, fenêtres, ballast, sols, traverses en bois, toits.
+- Résultat : **35/35 tests Node** et **33/33 vérifications navigateur**.
+
 ## 3. Ce qui n'a PAS pu être testé ici
 
 - **Téléphone Android réel** : performances, chaleur, gestes, Samsung Internet. Aucun appareil disponible.

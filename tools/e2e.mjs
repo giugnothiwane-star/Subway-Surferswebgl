@@ -357,6 +357,32 @@ await check('Skin Galaxie : équipement complet, trains jamais modifiés, conser
   return `perso + cape + pièces + board en Galaxie ; ${a.trains.length} matériaux de trains intacts ; conservé après rechargement`;
 });
 
+await check('Mes images : deux images locales, choix, rechargement, suppression', async () => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.click('[data-nav="studio"]');
+  await page.locator('#st-tabs [data-tab="coin"]').click();
+  for (const name of ['sonic.png', 'bob.png']) {
+    await page.setInputFiles('#st-coinfile', { name, mimeType: 'image/png', buffer: png });
+    await waitFor((n) => document.getElementById('st-msg').textContent.includes(n.replace('.png', '')), name, 10000);
+  }
+  const a = await game(() => ({ lib: window.__MNNROW.game.save.studio.coinLib.map((e) => e.name), preset: window.__MNNROW.game.save.studio.coinPreset, faces: !!window.__MNNROW.game.entities.coinFaces }));
+  await page.click('[data-nav="studio-exit"]');
+  await page.reload();
+  await waitFor(() => window.__MNNROW && document.getElementById('menu').classList.contains('active'), null, 120000);
+  const b = await game(() => ({ lib: window.__MNNROW.game.save.studio.coinLib.length, preset: window.__MNNROW.game.save.studio.coinPreset, tex: !!window.__MNNROW.game.custom.coinTexture }));
+  await page.click('[data-nav="studio"]');
+  await page.locator('#st-tabs [data-tab="coin"]').click();
+  await page.locator('#st-coinlib .skindel').first().click();
+  await page.locator('#st-coinlib .skindel').first().click();
+  await wait(500);
+  const c = await game(() => ({ lib: window.__MNNROW.game.save.studio.coinLib.length, preset: window.__MNNROW.game.save.studio.coinPreset }));
+  await page.click('[data-nav="studio-exit"]');
+  assert(a.lib.join() === 'sonic,bob' && a.preset.startsWith('local:') && a.faces, JSON.stringify(a));
+  assert(b.lib === 2 && b.preset === a.preset && b.tex, JSON.stringify(b));
+  assert(c.lib === 0 && c.preset === null, JSON.stringify(c));
+  return 'images ajoutées, conservées après rechargement, supprimées proprement';
+});
+
 await check('19. Redimensionnement / orientation paysage', async () => {
   await page.setViewportSize({ width: 915, height: 412 });
   await wait(700);
@@ -378,19 +404,24 @@ await check('Mobile : image jamais étirée quand la zone d\'affichage change sa
   return `rapport écran ${r.css.toFixed(3)} = image ${r.buf.toFixed(3)} = caméra ${r.cam.toFixed(3)}`;
 });
 
-await check('Chronos : durée de course et temps depuis la dernière pièce', async () => {
+await check('Chrono : un seul chrono stylé, figé à la chute', async () => {
   await game(() => { const g = window.__MNNROW.game; g.autopilot = false; g.save.selected.mode = 'standard'; g.startRun('E2ECRASH'); });
-  await waitFor(() => /^0:0[1-9]/.test(document.getElementById('h-time').textContent), null, 20000);
-  const coinTxt = await page.textContent('#h-cointime');
+  await waitFor(() => /^00:0[1-9]$/.test(document.getElementById('h-time').textContent), null, 20000);
+  const look = await page.evaluate(() => {
+    const box = document.getElementById('h-chrono');
+    const cs = getComputedStyle(box);
+    return { radius: parseFloat(cs.borderTopLeftRadius), font: getComputedStyle(document.getElementById('h-time')).fontFamily, coin: !!document.getElementById('h-cointime'), fontOk: document.fonts.check('900 20px Orbitron'), cs: document.getElementById('h-time-cs').textContent };
+  });
+  assert(look.radius >= 10 && /Orbitron/.test(look.font) && !look.coin && /^\.\d\d$/.test(look.cs), JSON.stringify(look));
   await waitFor(() => window.__MNNROW.info().state === 'gameover', null, 60000);
-  const t1 = await page.textContent('#h-time');
+  const t1 = await page.evaluate(() => document.getElementById('h-time').textContent + document.getElementById('h-time-cs').textContent);
   await wait(1500);
-  const t2 = await page.textContent('#h-time');
-  const go = await page.textContent('#go-time');
-  assert(t1 === t2 && go === t1, `${t1} / ${t2} / ${go}`);
-  assert(/s$/.test(coinTxt), coinTxt);
+  const t2 = await page.evaluate(() => document.getElementById('h-time').textContent + document.getElementById('h-time-cs').textContent);
+  const go = await page.evaluate(() => document.getElementById('go-time').textContent + document.getElementById('go-time-cs').textContent);
+  const dead = await page.evaluate(() => document.getElementById('h-chrono').classList.contains('dead'));
+  assert(t1 === t2 && go === t1 && dead, `${t1} / ${t2} / ${go} / ${dead}`);
   await page.click('#gameover [data-nav="quit"]');
-  return `chrono figé à la chute (${t1}), chrono pièce affiché (${coinTxt.trim()})`;
+  return `chrono figé à la chute (${t1}), bord arrondi ${look.radius}px, police ${look.fontOk ? 'Orbitron chargée' : 'Orbitron (repli)'}, plus de chrono pièce`;
 });
 
 await check('21. Perte puis restauration du contexte WebGL', async () => {

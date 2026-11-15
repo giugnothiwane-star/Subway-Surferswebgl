@@ -6,7 +6,7 @@ import { RNG, hashSeed } from '../gameplay/rng.js';
 import { LANE_WIDTH } from '../gameplay/constants.js';
 import * as P from '../models/Props.js';
 import { PartBuilder, RoundedBoxGeometry } from '../models/geo.js';
-import { groundTexture, makeTexture, roofTexture, windowEmissiveTexture, windowTexture } from '../models/textures.js';
+import { groundTexture, makeTexture, normalTexture, roofTexture, windowEmissiveTexture, windowTexture } from '../models/textures.js';
 import { AmbientParticles } from './Particles.js';
 
 const CHUNK = 40;
@@ -29,6 +29,9 @@ function worldUV(material, tile) {
       wUv = modelMatrix * wUv;
       #ifdef USE_MAP
         vMapUv = wUv.xz / ${tile.toFixed(2)};
+      #endif
+      #ifdef USE_NORMALMAP
+        vNormalMapUv = wUv.xz / ${tile.toFixed(2)};
       #endif`);
   };
   material.customProgramCacheKey = () => `worldUV${tile}`;
@@ -47,6 +50,9 @@ function instanceScaledUV(material, tile) {
         #endif
         #ifdef USE_EMISSIVEMAP
           vEmissiveMapUv = uv * sc;
+        #endif
+        #ifdef USE_NORMALMAP
+          vNormalMapUv = uv * sc;
         #endif
       #endif`);
   };
@@ -215,10 +221,18 @@ export class Environment {
     this.hemi.intensity = L.hemi * hemi;
   }
 
+  // Relief (carte de normales) dérivé de la texture couleur ; ignoré en LOW pour
+  // épargner les petits GPU.
+  relief(map, strength, scale) {
+    if (this.profile?.name === 'LOW') return {};
+    return { normalMap: normalTexture(map, strength), normalScale: new THREE.Vector2(scale, scale) };
+  }
+
   // ---- voie ferrée ---------------------------------------------------------------
   buildTrack() {
     const m = this.map;
-    const bedMat = this.track(worldUV(new THREE.MeshStandardMaterial({ map: groundTexture(m.bed.type, m.bed.color), roughness: 0.95 }), 3));
+    const bedMap = groundTexture(m.bed.type, m.bed.color);
+    const bedMat = this.track(worldUV(new THREE.MeshStandardMaterial({ map: bedMap, roughness: 0.95, ...this.relief(bedMap, 3, 1.1) }), 3));
     this.bed = new THREE.Mesh(this.track(new THREE.BoxGeometry(8.6, 0.3, 700)), bedMat);
     this.bed.position.y = -0.29;
     this.bed.receiveShadow = true;
@@ -258,8 +272,10 @@ export class Environment {
   // ---- sol ---------------------------------------------------------------------
   buildGround() {
     const m = this.map;
+    const gMap = groundTexture(m.ground.type, m.ground.color, m.ground.color2);
     const gMat = this.track(worldUV(new THREE.MeshStandardMaterial({
-      map: groundTexture(m.ground.type, m.ground.color, m.ground.color2),
+      map: gMap,
+      ...this.relief(gMap, 2, 0.7),
       roughness: m.groundGloss ? 0.35 : 0.95,
       metalness: m.groundGloss ? 0.3 : 0,
     }), 6));
@@ -273,13 +289,15 @@ export class Environment {
     this.group.add(this.groundPool);
     // eau (océan latéral, rivières sous les ponts)
     const waterTex = makeTexture(`water:${m.water}`, 256, 256, (ctx, w, h) => {
+      let seed = 1234567;
+      const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
       ctx.fillStyle = m.water;
       ctx.fillRect(0, 0, w, h);
       for (let i = 0; i < 260; i++) {
-        ctx.strokeStyle = `rgba(255,255,255,${0.04 + Math.random() * 0.12})`;
-        ctx.lineWidth = 1 + Math.random() * 2;
-        const x = Math.random() * w;
-        const y = Math.random() * h;
+        ctx.strokeStyle = `rgba(255,255,255,${0.04 + rand() * 0.12})`;
+        ctx.lineWidth = 1 + rand() * 2;
+        const x = rand() * w;
+        const y = rand() * h;
         ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.quadraticCurveTo(x + 10, y - 4, x + 22, y);
@@ -344,12 +362,15 @@ export class Environment {
     switch (type) {
       case 'building': {
         const style = m.buildings.find((b) => b.name === sub);
+        const wMap = windowTexture(style);
         const side = instanceScaledUV(new THREE.MeshStandardMaterial({
-          map: windowTexture(style),
+          map: wMap,
+          ...this.relief(wMap, 1.6, 0.6),
           roughness: 0.75,
           ...(m.emissiveWindows || style.litColor ? { emissive: 0xffffff, emissiveMap: windowEmissiveTexture(style), emissiveIntensity: m.emissiveWindows ? 1.25 : 0.5 } : {}),
         }), 4);
-        const roof = new THREE.MeshStandardMaterial({ map: roofTexture(m.roof), roughness: 0.9 });
+        const rMap = roofTexture(m.roof);
+        const roof = new THREE.MeshStandardMaterial({ map: rMap, roughness: 0.9, ...this.relief(rMap, 2, 0.6) });
         this.track(side);
         this.track(roof);
         return { geometry: P.buildingGeo(), materials: [side, side, roof, roof, side, side] };

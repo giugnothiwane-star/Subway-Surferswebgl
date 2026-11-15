@@ -27,10 +27,14 @@ function h(tag, props = {}, ...children) {
   return el;
 }
 const fmt = (n) => Math.floor(n).toLocaleString('fr-FR');
-const fmtTime = (t) => {
-  const m = Math.floor(t / 60);
-  const s = t - m * 60;
-  return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`;
+// Chrono : « MM:SS » + « .cc » (centièmes affichés plus petits). Au-delà d'une
+// heure les minutes continuent (60:00, 61:00…) pour garder une largeur stable.
+export const chronoParts = (t) => {
+  const cs = Math.max(0, Math.floor((Number(t) || 0) * 100 + 1e-6));
+  const m = Math.floor(cs / 6000);
+  const sec = Math.floor(cs / 100) % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return { main: `${pad(m)}:${pad(sec)}`, cs: `.${pad(cs % 100)}` };
 };
 // Limite la fréquence d'un traitement coûteux (glisser un sélecteur de couleur
 // déclenche des centaines d'événements) ; la dernière valeur est toujours appliquée.
@@ -562,7 +566,7 @@ export class UI {
     imageInput('st-skinfile', 'skin', (t) => { s().skins.character.skin = 'texture'; this.game.applyCustom({ skinTexture: t }); this.syncSkins(); this.setSubject('character', true); });
     imageInput('st-capefile', 'cape', (t) => { s().skins.cape.enabled = true; this.game.applyCustom({ capeTexture: t }); this.syncSkins(); this.setSubject('cape', true); });
     imageInput('st-boardfile', 'board', (t) => { this.game.applyCustom({ boardTexture: t }); this.setSubject('board', true); });
-    imageInput('st-coinfile', 'coin', (t) => { s().studio.coinPreset = null; this.game.applyCustom({ coinTexture: t }); this.renderCoinSkins(); this.setSubject('coin', true); });
+    $('st-coinfile').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) this.addLocalCoin(f); });
     imageInput('st-trainfile', 'train', (t) => { s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; this.game.applyCustom({ trainTexture: t }); this.setSubject('train', true); });
     document.querySelectorAll('[data-clear]').forEach((b) => b.addEventListener('click', async () => {
       const slot = b.dataset.clear;
@@ -649,6 +653,8 @@ export class UI {
     $('st-galanim').checked = sk.galaxy.animated;
     document.querySelectorAll('#st-coinfit button').forEach((b) => b.classList.toggle('on', b.dataset.fit === sk.coin.fit));
     $('st-coinedge').value = sk.coin.edgeColor;
+    document.querySelectorAll('#st-coinstyle button').forEach((b) => b.classList.toggle('on', b.dataset.style === sk.coin.style));
+    $('st-coinoutline').checked = sk.coin.outline;
     // matrice : un skin par catégorie, indépendamment
     const cats = [['character', 'Personnage', sk.character], ['cape', 'Cape', sk.cape], ['coin', 'Pièces', sk.coin], ['board', 'Hoverboard', sk.board]];
     $('st-skinmatrix').replaceChildren(...cats.map(([key, label, obj]) => {
@@ -742,6 +748,8 @@ export class UI {
     const capeColor = throttle(() => this.skinChanged(), 120);
     $('st-capecolor').addEventListener('input', (e) => { sk().cape.color = e.target.value; sk().cape.enabled = true; $('st-capeon').checked = true; capeColor(); });
     $('st-coinedge').addEventListener('input', (e) => { sk().coin.edgeColor = e.target.value; this.coinChanged(); });
+    document.querySelectorAll('#st-coinstyle button').forEach((b) => b.addEventListener('click', () => { sk().coin.style = b.dataset.style; this.coinChanged(); this.syncSkins(); }));
+    $('st-coinoutline').addEventListener('change', (e) => { sk().coin.outline = e.target.checked; this.coinChanged(); });
   }
 
   renderCoinSkins() {
@@ -754,10 +762,66 @@ export class UI {
       title: name,
       onclick: () => this.chooseCoinSkin(id),
     }, h('span', { class: 'disc' }, src ? h('img', { src: this.base + src, alt: name, loading: 'lazy' }) : null), h('em', { text: name }));
+    const lib = s.studio.coinLib || [];
+    const local = (e) => {
+      const id = `local:${e.id}`;
+      const btn = h('button', {
+        class: `skin${current === id ? ' on' : ''}`,
+        role: 'radio',
+        'aria-checked': current === id ? 'true' : 'false',
+        title: e.name,
+        onclick: () => this.chooseCoinSkin(id),
+      }, h('span', { class: 'disc' }, h('img', { alt: e.name, 'data-lib': e.id })), h('em', { text: e.name }));
+      const del = h('button', { class: 'skindel', 'aria-label': `Supprimer ${e.name}`, title: 'Supprimer', text: '✕', onclick: (ev) => { ev.stopPropagation(); this.deleteLocalCoin(e.id); } });
+      return h('div', { class: 'skinwrap' }, btn, del);
+    };
     $('st-coinskins').replaceChildren(
       item(null, 'Symbole MNNROW', null),
       ...COIN_SKINS.map((c) => item(c.id, c.name, c.file)),
     );
+    $('st-coinlib').replaceChildren(...lib.map(local));
+    $('st-coinlibempty').classList.toggle('hidden', lib.length > 0);
+    // vignettes des images locales (lues depuis IndexedDB)
+    this.libUrls = this.libUrls || new Map();
+    for (const img of document.querySelectorAll('#st-coinlib img[data-lib]')) {
+      const id = img.dataset.lib;
+      if (this.libUrls.has(id)) { img.src = this.libUrls.get(id); continue; }
+      AssetDB.get(`coinlib:${id}`).then((rec) => {
+        if (!rec?.blob) return;
+        const url = URL.createObjectURL(rec.blob);
+        this.libUrls.set(id, url);
+        img.src = url;
+      }).catch(() => {});
+    }
+  }
+
+  // Ajoute une image à « Mes images » (stockée sur l'appareil, jamais publiée).
+  async addLocalCoin(file) {
+    const s = this.save;
+    const msg = (t, ok = true) => { $('st-msg').textContent = t; $('st-msg').style.color = ok ? 'var(--lime)' : 'var(--danger)'; };
+    try {
+      const tex = await this.game.assets.imageTexture(file); // validation (signature, taille)
+      tex.dispose();
+      if ((s.studio.coinLib || []).length >= 16) throw new Error('16 images maximum : supprime-en une d\'abord.');
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      await AssetDB.put(`coinlib:${id}`, { blob: file, name: file.name, created: Date.now() });
+      const name = file.name.replace(/\.[a-z0-9]+$/i, '').slice(0, 24) || 'Image';
+      s.studio.coinLib = [...(s.studio.coinLib || []), { id, name }];
+      this.storage.save();
+      await this.chooseCoinSkin(`local:${id}`);
+      msg(`✓ « ${name} » ajoutée à Mes images et appliquée aux pièces.`);
+    } catch (e) {
+      msg(`✗ ${e.message}`, false);
+    }
+  }
+
+  async deleteLocalCoin(id) {
+    const s = this.save;
+    s.studio.coinLib = (s.studio.coinLib || []).filter((e) => e.id !== id);
+    try { await AssetDB.delete(`coinlib:${id}`); } catch { /* ignoré */ }
+    if (this.libUrls?.has(id)) { URL.revokeObjectURL(this.libUrls.get(id)); this.libUrls.delete(id); }
+    if (s.studio.coinPreset === `local:${id}`) await this.chooseCoinSkin(null);
+    else { this.storage.save(); this.renderCoinSkins(); }
   }
 
   async chooseCoinSkin(id) {
@@ -766,11 +830,18 @@ export class UI {
     const msg = (t, ok = true) => { $('st-msg').textContent = t; $('st-msg').style.color = ok ? 'var(--lime)' : 'var(--danger)'; };
     try {
       let tex = null;
-      if (id) {
+      if (id && id.startsWith('local:')) {
+        const rec = await AssetDB.get(`coinlib:${id.slice(6)}`);
+        if (!rec?.blob) throw new Error('image introuvable sur cet appareil');
+        tex = await this.game.assets.imageTexture(rec.blob);
+        msg('✓ Image personnelle appliquée aux pièces.');
+      } else if (id) {
         const skin = COIN_SKINS.find((c) => c.id === id);
         tex = await this.game.assets.loadTexture(skin.file);
         msg(`✓ Texture « ${skin.name} » appliquée aux pièces.`);
       } else msg('Symbole MNNROW d\'origine rétabli.');
+      // une image choisie montre le style 3D : on repasse le skin des pièces en Normal
+      if (id && s.skins.coin.skin !== 'normal' && s.skins.coin.skin !== 'texture') { s.skins.coin.skin = 'normal'; this.syncSkins(); }
       // une texture choisie remplace l'image importée (et inversement)
       s.studio.coinPreset = id;
       if (s.studio.files.coin) {
@@ -811,13 +882,16 @@ export class UI {
 
   updateHUD(sim, save) {
     // chrono de course : s'arrête à la chute (le temps de simulation ne progresse plus)
-    this.setText('h-time', fmtTime(sim.time));
-    if (this.hudCache.dead !== !sim.alive) { this.hudCache.dead = !sim.alive; $('h-time').parentElement.classList.toggle('dead', !sim.alive); }
-    // chrono « pièce » : compte depuis la dernière pièce et se fige un instant quand tu en prends une
-    const frozen = sim.lastCoinAt > 0 && sim.time - sim.lastCoinAt < 0.7;
-    const coinT = frozen ? sim.lastCoinGap : sim.time - sim.lastCoinAt;
-    this.setText('h-cointime', `${coinT.toFixed(1)} s`);
-    if (this.hudCache.frozen !== frozen) { this.hudCache.frozen = frozen; $('h-coinbox').classList.toggle('stopped', frozen); }
+    const ct = chronoParts(sim.time);
+    this.setText('h-time', ct.main);
+    this.setText('h-time-cs', ct.cs);
+    if (this.hudCache.dead !== !sim.alive) {
+      this.hudCache.dead = !sim.alive;
+      const box = $('h-chrono');
+      box.classList.toggle('dead', !sim.alive);
+      box.classList.remove('flash');
+      if (!sim.alive) { void box.offsetWidth; box.classList.add('flash'); }
+    }
     this.setText('h-score', fmt(sim.score));
     this.setText('h-dist', fmt(sim.s));
     this.setText('h-coins', fmt(sim.coins));
@@ -864,8 +938,9 @@ export class UI {
     $('go-dist').textContent = `${fmt(r.distance)} m`;
     $('go-coins').textContent = fmt(r.coins);
     $('go-best').textContent = fmt(r.best);
-    $('go-time').textContent = fmtTime(r.time);
-    $('go-nocoin').textContent = `${(r.longestNoCoin || 0).toFixed(1)} s`;
+    const ct = chronoParts(r.time);
+    $('go-time').textContent = ct.main;
+    $('go-time-cs').textContent = ct.cs;
     $('go-seed').textContent = r.seed;
     const lines = [];
     for (const d of r.finished) lines.push(h('div', { text: `★ Mission réussie : ${d.label} (+${d.reward})` }));

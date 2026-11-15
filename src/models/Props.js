@@ -3,7 +3,7 @@
 // { geometry, materials } fusionné pour l'instanciation (InstancedMesh).
 import * as THREE from 'three';
 import { PartBuilder, RoundedBoxGeometry, jitterGeometry, tube } from './geo.js';
-import { neonSignTexture, posterTexture, stripeTexture } from './textures.js';
+import { neonSignTexture, posterTexture, stripeTexture, woodTexture } from './textures.js';
 import { BARRIER, RAMP, TRAIN } from '../gameplay/constants.js';
 
 const mats = {};
@@ -20,7 +20,7 @@ export function mat(name, params, Type = THREE.MeshStandardMaterial) {
 // ---- Pièce -----------------------------------------------------------------
 // Pièce épaisse : tranche crantée, rebord, symbole original en relief (éclair
 // stylisé dans un losange) sur les deux faces.
-export function coinGeometry({ symbol = true } = {}) {
+export function coinGeometry({ symbol = true, wide = false } = {}) {
   // Deux groupes de matériaux : 0 = faces + rebords (+ symbole), 1 = tranche crantée.
   const pb = new PartBuilder();
   const gold = mat('Gold', { color: 0xffc23a, metalness: 1, roughness: 0.22, emissive: 0x3a2200, emissiveIntensity: 0.25 });
@@ -28,9 +28,13 @@ export function coinGeometry({ symbol = true } = {}) {
   const V = (r, y) => new THREE.Vector2(r, y);
   const SEG = 32;
   // face avant (y>0), tranche, face arrière : trois tours pour séparer les matériaux
-  const top = [V(0, 0.032), V(0.27, 0.032), V(0.3, 0.05), V(0.37, 0.06), V(0.4, 0.05)];
+  // wide : rebord fin pour laisser une grande zone d'image (pièces personnalisées)
+  const ri = wide ? 0.345 : 0.27;
+  const top = wide
+    ? [V(0, 0.032), V(ri, 0.032), V(0.36, 0.056), V(0.385, 0.06), V(0.4, 0.05)]
+    : [V(0, 0.032), V(0.27, 0.032), V(0.3, 0.05), V(0.37, 0.06), V(0.4, 0.05)];
   const band = [V(0.4, 0.05), V(0.405, 0.02), V(0.405, -0.02), V(0.4, -0.05)];
-  const bottom = [V(0.4, -0.05), V(0.37, -0.06), V(0.3, -0.05), V(0.27, -0.032), V(0, -0.032)];
+  const bottom = top.map((v) => V(v.x, -v.y)).reverse();
   for (const [prof, m] of [[top, gold], [bottom, gold], [band, edge]]) {
     pb.add(new THREE.LatheGeometry([...prof].reverse(), SEG), m, { rotation: [Math.PI / 2, 0, 0] });
   }
@@ -433,7 +437,8 @@ export function fenceGeo(color = 0x7d8794) {
 
 export function sleeperGeo(color = 0x6d5646) {
   const g = new RoundedBoxGeometry(2.3, 0.14, 0.3, 1, 0.03);
-  const m = mat(`Sleeper_${color}`, { color, roughness: 0.9 });
+  // bois teinté : la couleur de la carte multiplie les fibres grises de la texture
+  const m = mat(`Sleeper_${color}`, { color: new THREE.Color(color).multiplyScalar(1.25), map: woodTexture(), roughness: 0.88 });
   return { geometry: g, materials: [m] };
 }
 

@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MNNROW — galerie des skins</title>
+<style>body{margin:0;background:#111}canvas{display:block}</style></head><body>
+<script type="module">
+// Galerie : les 12 skins sur le personnage et la pièce + tests d'image de pièce
+// (rectangulaire, transparente, contenir / couvrir / zoom / rotation, face et dos).
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createCharacter, applyLook } from '/src/models/Character.js';
+import { SkinManager, defaultSkins } from '/src/skins/SkinManager.js';
+import { buildCoinPreview } from '/src/skins/CoinFactory.js';
+import { SKINS, updateSkins, setSkinQuality } from '/src/skins/SkinShader.js';
+const q = new URLSearchParams(location.search);
+setSkinQuality(q.get('q') || 'medium');
+const W = 1600, H = 900;
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x3a4252);
+scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.1)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(4, 8, 6); scene.add(d);
+const cam = new THREE.OrthographicCamera(-12, 12, 6.75, -6.75, 0.1, 100); cam.position.set(0, 0, 20);
+// image de test rectangulaire, transparente, orientée (texte + flèche vers le haut)
+const c = document.createElement('canvas'); c.width = 640; c.height = 400;
+const x = c.getContext('2d');
+x.fillStyle = '#1e6bff'; x.beginPath(); x.ellipse(320, 210, 290, 170, 0, 0, Math.PI * 2); x.fill();
+x.fillStyle = '#fff'; x.font = '900 120px sans-serif'; x.textAlign = 'center'; x.fillText('TEST', 320, 250);
+x.fillStyle = '#ff3b3b'; x.beginPath(); x.moveTo(320, 20); x.lineTo(380, 110); x.lineTo(260, 110); x.fill();
+const tex = new THREE.CanvasTexture(c);
+const mgrs = [];
+SKINS.forEach((sk, i) => {
+  const cfg = defaultSkins(); cfg.character.skin = sk.id; cfg.coin.skin = sk.id;
+  const m = new SkinManager(); m.setConfig(cfg); m.textures.character = tex;
+  const ch = createCharacter(); applyLook(ch.root, { hair: 'spiky' }); m.applyCharacter(ch.root);
+  ch.root.position.set(-11 + i * 2, 1.2, 0); ch.root.scale.setScalar(1.6); scene.add(ch.root);
+  const coin = buildCoinPreview(sk.id === 'texture' ? { ...cfg.coin } : cfg.coin, sk.id === 'texture' ? tex : null, null);
+  coin.position.set(-11 + i * 2, -1.2, 0); coin.scale.setScalar(1.9); coin.rotation.y = 0.35; scene.add(coin);
+});
+// rangée d'images : contenir, couvrir, zoom, rotation, puis vues de dos
+const variants = [{ fit: 'contain' }, { fit: 'cover' }, { fit: 'contain', zoom: 1.6 }, { fit: 'contain', rotation: 45 }, { fit: 'contain', offsetX: 0.2 }];
+variants.forEach((v, i) => {
+  for (const back of [false, true]) {
+    const coin = buildCoinPreview({ ...defaultSkins().coin, ...v }, tex, null);
+    coin.position.set(-11 + (i * 2 + (back ? 1 : 0)) * 2.2, -4.6, 0); coin.scale.setScalar(2.1);
+    coin.rotation.y = back ? Math.PI : 0; scene.add(coin);
+  }
+});
+updateSkins(2.5);
+r.render(scene, cam); window.__done = true;
+</script></body></html>

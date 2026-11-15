@@ -203,8 +203,14 @@
           <label class="toggle"><input type="checkbox" id="st-glowon" /> Lueur autour des pièces</label>
           <div class="colors"><label>Couleur de la lueur <input type="color" id="st-glow" /></label></div>
           <label class="field">Intensité de la lueur <input type="range" id="st-glowint" min="0.1" max="1" step="0.05" /></label>
-          <label class="field">Importer ma propre image (PNG / JPG / WebP) <input type="file" id="st-coinfile" accept="image/png,image/jpeg,image/webp" /></label>
-          <button class="btn small ghost" data-clear="coin">Retirer l'image</button>
+          <p class="field">Mes images <span class="muted small">(gardées sur cet appareil, jamais publiées)</span></p>
+          <div id="st-coinlib" class="skins"></div>
+          <p id="st-coinlibempty" class="muted small">Aucune image : importe tes propres images de pièces.</p>
+          <label class="field">Ajouter une image à Mes images (PNG / JPG / WebP) <input type="file" id="st-coinfile" accept="image/png,image/jpeg,image/webp" /></label>
+          <button class="btn small ghost" data-clear="coin">Revenir au symbole MNNROW</button>
+          <h3>Style de la face</h3>
+          <div class="segmented small" id="st-coinstyle" role="radiogroup" aria-label="Style de face"><button data-style="emboss">Encastré 3D (relief)</button><button data-style="flat">Plein (image entière)</button></div>
+          <label class="toggle"><input type="checkbox" id="st-coinoutline" /> Contour doré autour de l'image</label>
           <h3>Cadrage de l'image</h3>
           <div class="segmented small" id="st-coinfit" role="radiogroup" aria-label="Cadrage"><button data-fit="contain">Contenir (image entière)</button><button data-fit="cover">Couvrir (remplit)</button></div>
           <div id="st-coinsliders" class="sliders"></div>
@@ -244,9 +250,9 @@
         <div class="hud-left">
           <div class="score"><b id="h-score">0</b><span id="h-mult" class="mult">×1</span></div>
           <div class="dist"><span id="h-dist">0</span> m</div>
-          <div class="timers">
-            <span class="timer" title="Durée de la course : s'arrête quand tu tombes"><i>⏱</i><b id="h-time">0:00.0</b></span>
-            <span class="timer coin" id="h-coinbox" title="Temps depuis la dernière pièce : s'arrête quand tu en prends une"><i class="ico coin"></i><b id="h-cointime">0.0 s</b></span>
+          <div class="chrono" id="h-chrono" role="timer" title="Chrono de la course : s'arrête quand tu tombes">
+            <span class="chrono-dot" aria-hidden="true"></span>
+            <span class="chrono-digits"><b id="h-time">00:00</b><small id="h-time-cs">.00</small></span>
           </div>
         </div>
         <div class="hud-right">
@@ -285,13 +291,15 @@
         <div class="eyebrow" id="go-cause">FIN DE PARTIE</div>
         <h2 id="go-title">Belle course !</h2>
         <div id="go-record" class="record hidden">NOUVEAU RECORD</div>
+        <div class="chrono big dead" id="go-chrono" title="Durée de la course">
+          <span class="chrono-dot" aria-hidden="true"></span>
+          <span class="chrono-digits"><b id="go-time">00:00</b><small id="go-time-cs">.00</small></span>
+        </div>
         <div class="resgrid">
           <div><small>Score</small><b id="go-score">0</b></div>
           <div><small>Distance</small><b id="go-dist">0 m</b></div>
           <div><small>Pièces</small><b id="go-coins">0</b></div>
           <div><small>Meilleur score</small><b id="go-best">0</b></div>
-          <div><small>Durée de la course</small><b id="go-time">0:00.0</b></div>
-          <div><small>Plus long sans pièce</small><b id="go-nocoin">0.0 s</b></div>
         </div>
         <div id="go-missions" class="small"></div>
         <p class="muted small">Graine : <code id="go-seed">—</code></p>

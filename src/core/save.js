@@ -28,6 +28,7 @@ export function defaultSave() {
     studio: {
       coinTint: null,
       coinPreset: null,
+      coinLib: [], // « Mes images » : images de pièces gardées sur l'appareil (IndexedDB)
       coinGlow: { enabled: false, color: '#ffd23a', intensity: 0.6 },
       trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' },
       lighting: { exposure: 1, sun: 1, hemi: 1 },
@@ -120,7 +121,14 @@ export function validateSave(input) {
       out.studio.coinGlow = { enabled: bool(s.coinGlow.enabled, false), color: color(s.coinGlow.color, '#ffd23a'), intensity: num(s.coinGlow.intensity, 0.6, 0.1, 1) };
     }
     const preset = s.coinPreset === 'samoyede' ? 'husky' : s.coinPreset; // ancien nom du chien
-    out.studio.coinPreset = oneOf(preset, COIN_SKINS.map((c) => c.id), null);
+    if (Array.isArray(s.coinLib)) {
+      out.studio.coinLib = s.coinLib
+        .filter((e) => isObj(e) && /^[\w-]{1,40}$/.test(e.id || ''))
+        .slice(0, 16)
+        .map((e) => ({ id: e.id, name: typeof e.name === 'string' ? e.name.slice(0, 40) : 'Image' }));
+    }
+    const localIds = out.studio.coinLib.map((e) => `local:${e.id}`);
+    out.studio.coinPreset = oneOf(preset, [...COIN_SKINS.map((c) => c.id), ...localIds], null);
     if (isObj(s.trainLivery)) {
       out.studio.trainLivery = {
         enabled: bool(s.trainLivery.enabled, false),

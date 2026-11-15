@@ -125,6 +125,20 @@ Les touches sont ignorées pendant la saisie dans un champ texte, et maintenir u
 - Enregistrement local : préférences validées dans `localStorage`, fichiers en Blob dans **IndexedDB** (jamais en base64 dans `localStorage`).
 - Réinitialisation.
 
+**Skins — MNNROW Universal Texture Engine** (`src/skins/`)
+- 12 skins aux matières réellement différentes : Normal, **Galaxie**, Néon, Or, Argent, Cristal, Feu, Glace, Arc-en-ciel, Ombre, Énergie et Texture perso (image projetée sans étirement).
+- Technique : shaders procéduraux injectés (`onBeforeCompile`) dans les matériaux PBR standard. Le squelette, les animations, l'instancing des pièces et les ombres restent intacts. Le motif est calculé en coordonnées locales : pas de coutures, et il suit le corps qui bouge.
+- **Galaxie** : nébuleuses en bruit fractal déformé, volutes, deux couches d'étoiles scintillantes et reflets cosmiques. Tout est réglable : 4 couleurs, densité et éclat des étoiles, scintillement, nébuleuses, lueur, contraste, échelle, rotation, vitesse, mode statique. La qualité suit le profil LOW / MEDIUM / HIGH.
+- **Par catégorie, indépendamment** :
+  - personnage complet (yeux et bouche gardés) ou vêtements seuls ;
+  - cape ;
+  - pièces (faces et tranche) ;
+  - hoverboard.
+- Bouton **« Appliquer Galaxie à l'équipement »**. Les trains, rails, décors et cartes ne sont jamais touchés ; les trains ont leur propre personnalisation.
+- **Cape 3D** attachée au torse, avec une physique ressort-amortisseur légère : elle se soulève en courant, réagit aux sauts, aux changements de voie et s'enroule pendant les roulades. Couleur, image ou skin au choix.
+- **Pièces** : images sur les faces avant et arrière, toujours lisibles. Cadrage contenir ou couvrir, zoom, décalage, rotation ; couleur de tranche, métallicité, rugosité, brillance. Une seule texture GPU est partagée par toutes les pièces.
+- Scènes de contrôle : `dev/test-galaxy.html` (les 10 objets du cahier des charges) et `dev/test-skins.html` (galerie des skins et tests d'images).
+
 **Audio** (`src/audio/AudioSystem.js`)
 - Musique et effets **synthétisés** en Web Audio : musique de menu et de course propre à chaque carte, ambiance de chaque carte, 21 effets.
 - Volumes général, musique et effets, plus un bouton muet.
