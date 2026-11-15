@@ -16,6 +16,7 @@ export class CameraRig {
     this.shake = 0;
     this.reduced = false;
     this.aspect = 1;
+    this.screenH = 800;
     this.mode = 'game';
     this.orbit = 0;
     this._box = {};
@@ -34,8 +35,9 @@ export class CameraRig {
     this.roll = 0;
   }
 
-  setAspect(aspect) {
+  setAspect(aspect, screenH = 800) {
     this.aspect = aspect;
+    this.screenH = screenH;
     this.camera.aspect = aspect;
     this.camera.updateProjectionMatrix();
   }
@@ -125,10 +127,12 @@ export class CameraRig {
   updateMenu(dt, target) {
     this.roll = 0;
     this.blend = null;
-    this.viewShift(this.aspect < 0.8 ? 0.2 : 0, this.aspect >= 0.8 ? 0.12 : 0);
-    this.orbit += dt * (this.reduced ? 0.05 : 0.12);
     const portrait = this.aspect < 0.8;
-    const r = portrait ? 8.2 : 6.2;
+    const wideShort = this.aspect >= 1.6 && this.screenH < 560; // téléphone en paysage
+    if (wideShort) this.viewShift(0.16, 0);
+    else this.viewShift(portrait ? 0.2 : 0, !portrait ? 0.12 : 0);
+    this.orbit += dt * (this.reduced ? 0.05 : 0.12);
+    const r = portrait ? 8.2 : wideShort ? 10.5 : 6.2;
     const a = Math.sin(this.orbit) * 0.55;
     this.pos.set(target.x + Math.sin(a) * r, target.y + 1.5, target.z + Math.cos(a) * r);
     this.look.set(target.x, target.y + 0.95, target.z);

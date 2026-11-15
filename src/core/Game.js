@@ -496,7 +496,7 @@ export class Game {
   // ---- divers ----------------------------------------------------------------------
   resize() {
     const { w, h, aspect } = this.r.resize();
-    this.rig.setAspect(aspect);
+    this.rig.setAspect(aspect, h);
     this.particles.setPixelScale(h * this.r.dpr);
   }
 

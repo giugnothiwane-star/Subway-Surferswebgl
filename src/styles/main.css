@@ -235,13 +235,24 @@ code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; 
   .touchpad { display: none; }
   .boardbtn { bottom: calc(24px + var(--sab)); }
 }
-@media (max-width: 360px) {
-  .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .tile { min-height: 52px; grid-auto-flow: column; justify-content: center; }
+@media (max-width: 380px) {
+  .tile { font-size: 10.5px; min-height: 58px; padding: 9px 2px 8px; gap: 4px; letter-spacing: -0.01em; }
+  .stat { padding: 5px 9px; }
   .stat b { font-size: 14px; }
+  .chip { padding: 6px 9px; font-size: 13px; }
+}
+/* téléphones courts en portrait : on garde la place pour le personnage */
+@media (max-height: 720px) and (orientation: portrait) {
+  .menu-info p { display: none; }
+  .menu-info h1 { font-size: clamp(26px, 7vw, 40px); }
+  .btn.play { min-height: 52px; font-size: 19px; }
+  .menu-body { gap: 10px; }
+  .stats-row { margin-top: 6px; }
 }
 @media (max-height: 520px) and (orientation: landscape) {
   .menu-body { grid-template-columns: 1fr 1fr; align-items: end; }
+  .menu-info p { display: none; }
+  .menu-info h1 { font-size: 30px; }
   .menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .tile { min-height: 48px; padding: 6px 2px; }
   .btn.play { min-height: 48px; font-size: 18px; }
