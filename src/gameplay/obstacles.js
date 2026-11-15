@@ -75,7 +75,7 @@ export function groundHeight(entities, x, s, sp) {
   let g = 0;
   for (let i = 0; i < entities.length; i++) {
     const e = entities[i];
-    if (e.kind !== 'train' && e.kind !== 'ramp') continue;
+    if ((e.kind !== 'train' && e.kind !== 'ramp') || e.ghost) continue;
     const half = (e.kind === 'train' ? TRAIN.width : RAMP.width) / 2;
     if (Math.abs(x - laneX(e.lane)) > half) continue;
     const top = platformTop(e, s, sp);

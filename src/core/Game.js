@@ -169,12 +169,15 @@ export class Game {
     this.finishedMissions = [];
     this.deathTimer = 0;
     this.rig.groundY = 0;
-    this.rig.camera.fov = 60;
+    this.rig.viewShift(0);
+    this.rig.beginTransition();
     this.state = 'playing';
     this.controls && (this.controls.enabled = true);
     this.audio.startMusic('run', this.map.music);
     this.audio.duck(false);
     this.ui.showHUD(this.sim);
+    if (this.save.settings.autoFullscreen && /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) this.ui.toggleFullscreen(true);
+    this.keepAwake(true);
     this.storage.save();
   }
 
@@ -205,7 +208,21 @@ export class Game {
     this.ui.showHUD(this.sim);
   }
 
+  // Empêche l'écran de s'éteindre pendant une course (Wake Lock API si disponible).
+  async keepAwake(on) {
+    try {
+      if (on && 'wakeLock' in navigator && !this.wakeLock && !document.hidden) {
+        this.wakeLock = await navigator.wakeLock.request('screen');
+        this.wakeLock.addEventListener?.('release', () => { this.wakeLock = null; });
+      } else if (!on && this.wakeLock) {
+        await this.wakeLock.release();
+        this.wakeLock = null;
+      }
+    } catch { this.wakeLock = null; }
+  }
+
   quitToMenu() {
+    this.keepAwake(false);
     this.state = 'menu';
     this.controls && (this.controls.enabled = false);
     this.sim = null;
@@ -235,6 +252,7 @@ export class Game {
     const reward = claim(this.save.missions, this.save);
     this.storage.save();
     this.state = 'gameover';
+    this.keepAwake(false);
     this.controls && (this.controls.enabled = false);
     this.audio.play('gameover');
     this.audio.startMusic('menu', this.map.music);
@@ -261,9 +279,10 @@ export class Game {
         a.play('land');
         if (e.hard) { this.dust(pp); this.rig.addShake(0.12); }
         break;
-      case 'stumble': a.play('stumble'); this.rig.addShake(0.5); this.ui.toast('Attention !', 'warn'); break;
+      case 'stumble': a.play('stumble'); this.ui.vibrate(40); this.rig.addShake(0.5); this.ui.toast('Attention !', 'warn'); break;
       case 'crash':
         a.play('crash');
+        this.ui.vibrate([80, 40, 120]);
         this.rig.addShake(1);
         this.particles.emit(pp.x, pp.y + 1, pp.z, { count: 30, speed: 5, color: 0xffffff, size: 0.4, life: 0.7 });
         this.deathTimer = 1.3;
@@ -272,6 +291,7 @@ export class Game {
       case 'powerup': {
         const names = { magnet: 'Aimant', jetpack: 'Jetpack', multiplier: 'Score ×2', sneakers: 'Super Sneakers', shield: 'Bouclier' };
         a.play(e.power === 'magnet' ? 'magnet' : e.power === 'shield' ? 'shield' : 'powerup');
+        this.ui.vibrate(25);
         this.ui.toast(names[e.power] || e.power, 'power');
         this.particles.emit(pp.x, pp.y + 1, pp.z, { count: 24, speed: 4, color: 0x9be7ff, size: 0.35, life: 0.6 });
         break;
@@ -284,8 +304,8 @@ export class Game {
         a.play('hoverStart');
         this.ui.toast('Hoverboard !', 'power');
         break;
-      case 'hoverBreak': a.play('hoverBreak'); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 0.3, pp.z, { count: 26, speed: 5, color: 0x65d9ff, size: 0.35, life: 0.6 }); break;
-      case 'shieldBreak': a.play('shieldBreak'); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 1, pp.z, { count: 30, speed: 6, color: 0x59c8ff, size: 0.35, life: 0.6 }); break;
+      case 'hoverBreak': a.play('hoverBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 0.3, pp.z, { count: 26, speed: 5, color: 0x65d9ff, size: 0.35, life: 0.6 }); break;
+      case 'shieldBreak': a.play('shieldBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 1, pp.z, { count: 30, speed: 6, color: 0x59c8ff, size: 0.35, life: 0.6 }); break;
       case 'zenHit': a.play('stumble'); this.rig.addShake(0.4); break;
     }
   }
@@ -341,7 +361,7 @@ export class Game {
         this.ui.updateHUD(sim, this.save);
         this.emitTrails(sim);
       }
-      const g = groundHeight(sim.entities.filter((e) => !e.ghost), sim.x, sim.s, sim.s);
+      const g = groundHeight(sim.entities, sim.x, sim.s, sim.s);
       if (st !== 'paused') {
         if (st === 'gameover' && this.celebrate > 0) {
           this.celebrate -= dt;
@@ -487,6 +507,7 @@ export class Game {
     } else {
       this.audio.resume();
       this.clock.last = performance.now();
+      if (this.state === 'playing' || this.state === 'paused') this.keepAwake(true);
     }
   }
 

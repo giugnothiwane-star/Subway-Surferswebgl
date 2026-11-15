@@ -44,6 +44,7 @@ export class EntityRenderer {
     this.trains = new TrainFactory();
     this.custom = custom;
     this.visuals = new Map();
+    this.flares = [];
     this.frame = 0;
     const theme = map.theme;
     this.pools = {
@@ -140,6 +141,27 @@ export class EntityRenderer {
     for (const [id, v] of this.visuals) if (v.kind === 'train') { v.obj.parent?.remove(v.obj); this.visuals.delete(id); }
   }
 
+  makeFlare() {
+    const tex = makeTexture('headFlare', 128, 128, (ctx, w, h) => {
+      const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.2, 'rgba(255,240,200,0.85)');
+      g.addColorStop(0.55, 'rgba(255,210,140,0.25)');
+      g.addColorStop(1, 'rgba(255,200,120,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }, { srgb: false });
+    const g = new THREE.Group();
+    g.name = 'headlightFlare';
+    for (const sx of [-1, 1]) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: 0xfff1d0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+      sp.position.set(sx * 0.72, 1.05, 0.35);
+      sp.scale.setScalar(1.8);
+      g.add(sp);
+    }
+    return g;
+  }
+
   powerupVisual(type) {
     const g = new THREE.Group();
     const model = powerupModel(type);
@@ -185,7 +207,17 @@ export class EntityRenderer {
       const { livery, index } = this.liveryFor({ ...e, variant: style });
       const obj = this.trains.acquire(style, livery, index, e.cars || 1);
       if (obj.isLOD) obj.levels[1].distance = this.profile.lod;
-      return { kind: 'train', obj, release: () => this.trains.release(obj) };
+      // phares éblouissants sur les trains qui arrivent en face (lisibles de loin)
+      let flare = null;
+      if (e.moving) {
+        flare = this.flares.pop() || this.makeFlare();
+        flare.visible = true;
+        obj.add(flare);
+      }
+      return { kind: 'train', obj, flare, release: () => {
+        if (flare) { obj.remove(flare); this.flares.push(flare); }
+        this.trains.release(obj);
+      } };
     }
     let key = null;
     if (e.kind === 'barrier') key = `barrier_${e.type}`;
@@ -238,7 +270,15 @@ export class EntityRenderer {
       }
       v.stamp = this.frame;
       const o = v.obj;
-      if (e.kind === 'train') o.position.set(laneX(e.lane), 0, -s0);
+      if (e.kind === 'train') {
+        o.position.set(laneX(e.lane), 0, -s0);
+        if (v.flare) {
+          // pulsation + grossissement avec la distance pour rester visible
+          const d = Math.max(0, s0 - s);
+          const k = (1.4 + Math.min(2.2, d / 40)) * (0.85 + 0.15 * Math.sin(time * 9 + e.id));
+          for (const sp of v.flare.children) sp.scale.setScalar(k);
+        }
+      }
       else if (e.kind === 'powerup') {
         const bob = Math.sin(time * 3 + e.id) * 0.12;
         o.position.set(laneX(e.lane), e.y + 0.1 + bob, -e.s);

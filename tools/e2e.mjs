@@ -130,12 +130,15 @@ await check('8. Roulade (hauteur de collision réduite)', async () => {
 await check('20. Compatibilité tactile (swipes Pointer Events)', async () => {
   await wait(700);
   const before = (await info()).sim.lane;
+  const lc0 = await game(() => window.__MNNROW.game.sim.stats.laneChanges);
   await page.evaluate(() => {
     const el = document.getElementById('gesture');
     const ev = (type, x, y) => el.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: 'touch', clientX: x, clientY: y, bubbles: true, isPrimary: true }));
     ev('pointerdown', 200, 500); ev('pointermove', 230, 502); ev('pointermove', 290, 505); ev('pointerup', 290, 505);
   });
-  await wait(600);
+  await waitFor((lc0) => window.__MNNROW.game.sim.stats.laneChanges > lc0, lc0, 5000).catch(() => {});
+  const lc1 = await game(() => window.__MNNROW.game.sim.stats.laneChanges);
+  await wait(400);
   const after = (await info()).sim.lane;
   await page.evaluate(() => {
     const el = document.getElementById('gesture');
@@ -144,7 +147,8 @@ await check('20. Compatibilité tactile (swipes Pointer Events)', async () => {
   });
   await waitFor(() => window.__MNNROW.info().sim.y > 0.2, null, 3000).catch(() => {});
   const y = (await info()).sim.y;
-  assert(after === Math.min(1, before + 1), `voie ${before} -> ${after}`);
+  // un trébuchement en mode Zen peut ramener le joueur : on vérifie que le geste a été pris en compte
+  assert(lc1 === lc0 + 1 || (before === 1 && lc1 === lc0), `changement de voie non reçu (${lc0} -> ${lc1})`);
   assert(y > 0.2, `pas de saut après swipe haut (y=${y})`);
   await page.screenshot({ path: `${OUT}/02-course.png` });
   return `swipe droite : voie ${before}→${after}, swipe haut : y=${y.toFixed(2)}`;
@@ -153,7 +157,8 @@ await check('20. Compatibilité tactile (swipes Pointer Events)', async () => {
 await check('11a. Activation du hoverboard (touche E) et décompte de l\'inventaire', async () => {
   const before = await game(() => window.__MNNROW.game.save.hoverboards);
   await page.keyboard.press('e');
-  await wait(300);
+  await waitFor(() => window.__MNNROW.game.sim.powerups.active('hoverboard'), null, 5000).catch(() => {});
+  await wait(200);
   const r = await game(() => ({ active: window.__MNNROW.game.sim.powerups.active('hoverboard'), n: window.__MNNROW.game.save.hoverboards, view: window.__MNNROW.game.player.boardHolder.visible }));
   assert(r.active && r.n === before - 1 && r.view, JSON.stringify(r));
   return `stock ${before} -> ${r.n}, planche visible`;
@@ -175,7 +180,7 @@ await check('11c. Chaque bonus s\'active et apparaît dans le HUD', async () => 
   const out = [];
   for (const t of ['magnet', 'multiplier', 'sneakers', 'shield', 'jetpack']) {
     const r = await game((t) => { const g = window.__MNNROW.game; g.sim.activatePowerup(t); return g.sim.powerups.active(t); }, t);
-    await wait(250);
+    await page.locator(`#h-powers [data-p="${t}"]`).waitFor({ timeout: 5000 }).catch(() => {});
     const hud = await page.locator(`#h-powers [data-p="${t}"]`).count();
     assert(r && hud === 1, `${t}: actif=${r} hud=${hud}`);
     out.push(t);
@@ -309,6 +314,17 @@ await check('Pause automatique quand la page est masquée', async () => {
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')); });
   assert(st === 'playing' && after === 'paused', `${st} -> ${after}`);
   return 'playing -> paused';
+});
+
+await check('Bouton retour (Android) : pause en course, sans quitter le site', async () => {
+  await game(() => window.__MNNROW.game.resume());
+  await waitFor(() => window.__MNNROW.info().state === 'playing', null, 5000);
+  await page.goBack();
+  await waitFor(() => window.__MNNROW && window.__MNNROW.info().state === 'paused', null, 5000);
+  const url = page.url();
+  await game(() => window.__MNNROW.game.resume());
+  assert(url.includes('/Subway-Surferswebgl/'), url);
+  return 'playing -> paused, page conservée';
 });
 
 await check('Commandes ignorées pendant la saisie de texte', async () => {

@@ -45,8 +45,49 @@ export class UI {
     this.bindSettings();
     this.bindStudio();
     $('buyboard').addEventListener('click', () => this.buyBoard());
+    $('m-fullscreen').addEventListener('click', () => { this.click(); this.toggleFullscreen(); });
+    document.addEventListener('fullscreenchange', () => { $('m-fullscreen').textContent = document.fullscreenElement ? '🗗' : '⛶'; setTimeout(() => this.game.resize(), 150); });
+    if (!document.fullscreenEnabled) $('m-fullscreen').classList.add('hidden');
+    this.bindHistory();
     this.renderModes();
     this.applyBodyClasses();
+  }
+
+  // ---- intégration mobile --------------------------------------------------------
+  vibrate(pattern) {
+    if (this.save.settings.vibrate && navigator.vibrate) {
+      try { navigator.vibrate(pattern); } catch { /* non pris en charge */ }
+    }
+  }
+
+  async toggleFullscreen(force) {
+    try {
+      const want = force ?? !document.fullscreenElement;
+      if (want && !document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      else if (!want && document.fullscreenElement) await document.exitFullscreen();
+    } catch { /* refusé par le navigateur : sans conséquence */ }
+  }
+
+  // Bouton « retour » d'Android : pause en course, retour au menu ailleurs (au lieu de quitter le site).
+  bindHistory() {
+    try {
+      history.replaceState({ mnn: 'root' }, '');
+      history.pushState({ mnn: 'game' }, '');
+    } catch { return; }
+    window.addEventListener('popstate', () => {
+      const g = this.game;
+      let handled = true;
+      if (g.state === 'playing') g.pause();
+      else if (this.current === 'studio') this.closeStudio();
+      else if (this.current === 'settings') this.showScreen(this.prev === 'pause' ? 'pause' : 'menu');
+      else if (this.current === 'pause') g.resume();
+      else if (this.current === 'gameover') g.quitToMenu();
+      else if (this.current !== 'menu') this.nav('menu');
+      else handled = false;
+      if (handled) {
+        try { history.pushState({ mnn: 'game' }, ''); } catch { /* ignoré */ }
+      } else history.back(); // depuis le menu : on quitte vraiment
+    });
   }
 
   click() {
@@ -67,7 +108,7 @@ export class UI {
       case 'back': this.showScreen(this.prev === 'pause' ? 'pause' : 'menu'); return;
       case 'studio': this.openStudio(); return;
       case 'studio-exit': this.closeStudio(); return;
-      case 'menu': g.menuAnim = 'menu'; this.showScreen('menu'); return;
+      case 'menu': g.menuAnim = 'menu'; g.applyCharacter(); g.applyBoard(); this.showScreen('menu'); return;
       case 'characters': g.menuAnim = 'idle'; this.renderCharacters(); this.showScreen('characters'); return;
       case 'boards': g.menuAnim = 'hoverboard'; this.renderBoards(); this.showScreen('boards'); return;
       case 'maps': this.renderMaps(); this.showScreen('maps'); return;
@@ -272,6 +313,8 @@ export class UI {
     $('s-reduced').checked = st.reducedMotion;
     $('s-fps').checked = st.showFps;
     $('s-touch').checked = st.touchButtons;
+    $('s-vibrate').checked = st.vibrate;
+    $('s-autofs').checked = st.autoFullscreen;
     $('s-swipe').value = st.swipeSensitivity;
     $('s-master').value = st.master;
     $('s-music').value = st.music;
@@ -303,6 +346,8 @@ export class UI {
     $('s-reduced').addEventListener('change', (e) => { st().reducedMotion = e.target.checked; this.game.setReducedMotion(e.target.checked); persist(); });
     $('s-fps').addEventListener('change', (e) => { st().showFps = e.target.checked; this.applyBodyClasses(); persist(); });
     $('s-touch').addEventListener('change', (e) => { st().touchButtons = e.target.checked; this.applyBodyClasses(); persist(); });
+    $('s-vibrate').addEventListener('change', (e) => { st().vibrate = e.target.checked; persist(); if (e.target.checked) this.vibrate(30); });
+    $('s-autofs').addEventListener('change', (e) => { st().autoFullscreen = e.target.checked; persist(); });
     $('s-swipe').addEventListener('input', (e) => { st().swipeSensitivity = Number(e.target.value); if (this.game.controls) this.game.controls.sensitivity = st().swipeSensitivity; persist(); });
     for (const k of ['master', 'music', 'sfx']) $(`s-${k}`).addEventListener('input', (e) => { st()[k] = Number(e.target.value); this.audio.setVolumes(st()); persist(); });
     $('s-mute').addEventListener('change', (e) => { st().muted = e.target.checked; this.audio.setVolumes(st()); persist(); });

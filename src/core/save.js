@@ -21,7 +21,7 @@ export function defaultSave() {
     missions: { level: 1, active: [], completedTotal: 0 },
     settings: {
       quality: 'auto', shadows: null, reducedMotion: false, touchButtons: true, showFps: false,
-      master: 0.8, music: 0.6, sfx: 0.8, muted: false, swipeSensitivity: 1,
+      master: 0.8, music: 0.6, sfx: 0.8, muted: false, swipeSensitivity: 1, vibrate: true, autoFullscreen: false,
     },
     studio: {
       coinTint: null,
@@ -105,6 +105,8 @@ export function validateSave(input) {
     o.sfx = num(s.sfx, 0.8, 0, 1);
     o.muted = bool(s.muted, false);
     o.swipeSensitivity = num(s.swipeSensitivity, 1, 0.5, 2);
+    o.vibrate = bool(s.vibrate, true);
+    o.autoFullscreen = bool(s.autoFullscreen, false);
   }
   if (isObj(input.studio)) {
     const s = input.studio;
