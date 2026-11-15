@@ -15,7 +15,8 @@ test('code propriétaire : seule l\'empreinte est stockée, comparaison exacte',
   assert.equal(await verifyOwnerCode('abc', { salt: TEST.salt, hash, iterations: 1000 }), false);
   assert.equal(await verifyOwnerCode(''), false);
   const src = (await import('node:fs')).readFileSync('src/core/Owner.js', 'utf8');
-  assert.ok(!/2761985/.test(src), 'le code en clair ne doit pas être dans le source');
+  // aucun code numérique en clair (7 chiffres ou plus) dans le source
+  assert.ok(!/\b\d{7,12}\b/.test(src), 'le code en clair ne doit pas être dans le source');
 });
 
 test('verrouillage progressif après 5 échecs', () => {
