@@ -4,6 +4,7 @@
 import { BOARDS, CHARACTERS, COIN_SKINS, MISSION_POOL, VERSIONS } from '../data/catalog.js';
 import { MAPS } from '../data/maps.js';
 import { cloneDefaults, validateKeys } from '../gameplay/keymap.js';
+import { defaultSkins, validateSkins } from '../skins/SkinManager.js';
 
 export const SAVE_VERSION = 1;
 
@@ -30,8 +31,9 @@ export function defaultSave() {
       coinGlow: { enabled: false, color: '#ffd23a', intensity: 0.6 },
       trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' },
       lighting: { exposure: 1, sun: 1, hemi: 1 },
-      files: { shirt: null, coin: null, board: null, train: null, model: null },
+      files: { shirt: null, coin: null, board: null, train: null, model: null, skin: null, cape: null },
     },
+    skins: defaultSkins(),
     lastSeed: null,
   };
 }
@@ -132,6 +134,8 @@ export function validateSave(input) {
     }
     if (isObj(s.files)) for (const k of Object.keys(out.studio.files)) out.studio.files[k] = strId(s.files[k], null);
   }
+  // skins (Galaxie…) : absents des anciennes sauvegardes -> valeurs par défaut
+  out.skins = validateSkins(input.skins);
   out.lastSeed = typeof input.lastSeed === 'string' && input.lastSeed.length < 40 ? input.lastSeed : null;
   return out;
 }

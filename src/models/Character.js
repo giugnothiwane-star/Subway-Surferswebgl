@@ -517,7 +517,9 @@ function soleMinY(bones) {
 export function applyLook(root, look) {
   const mats = {};
   root.traverse((o) => {
-    if (o.isMesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) mats[m.name] = m;
+    // couleurs appliquées aux matériaux d'origine, même si un skin est affiché par-dessus
+    const base = o.isMesh ? (o.userData.baseMaterial ?? o.material) : null;
+    if (base) for (const m of Array.isArray(base) ? base : [base]) mats[m.name] = m;
     const m = /^(Hair|Acc)_([a-z]+)/.exec(o.name);
     if (!m) return;
     if (m[1] === 'Hair') o.visible = m[2] === (look.hair || 'spiky');

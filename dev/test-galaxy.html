@@ -1,0 +1,74 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MNNROW — scène de test Galaxie</title>
+<style>body{margin:0;background:#111;color:#fff;font:12px sans-serif}canvas{display:block}#l{position:fixed;left:0;right:0;bottom:4px;display:flex;justify-content:space-around;pointer-events:none}</style></head><body>
+<div id="l"></div>
+<script type="module">
+// Scène de test : chaque objet utilise les VRAIS modules du jeu (SkinManager,
+// CoinFactory, Cape, Trains). Le train doit rester normal avec la Galaxie globale.
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createCharacter, applyLook } from '/src/models/Character.js';
+import { buildTrain } from '/src/models/Trains.js';
+import { buildHoverboard } from '/src/models/Hoverboards.js';
+import { Cape } from '/src/models/Cape.js';
+import { SkinManager, defaultSkins, applyGalaxyToEquipment } from '/src/skins/SkinManager.js';
+import { buildCoinPreview } from '/src/skins/CoinFactory.js';
+import { updateSkins, setSkinQuality } from '/src/skins/SkinShader.js';
+const q = new URLSearchParams(location.search);
+setSkinQuality(q.get('q') || 'medium');
+const W = +q.get('w') || 1600, H = +q.get('h') || 700;
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2a3140);
+scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.1)); const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(4, 8, 6); scene.add(d);
+const cam = new THREE.PerspectiveCamera(32, W / H, 0.1, 200); cam.position.set(0, 2.2, 15); cam.lookAt(0, 1.0, 0);
+if (q.get('zoom')) { const zx = +q.get('zoom'); cam.position.set(zx, 1.4, 4.2); cam.lookAt(zx, 1.0, 0); }
+const labels = [];
+const place = (obj, x, label) => { obj.position.x = x; scene.add(obj); labels.push(label); };
+const normal = new SkinManager(); normal.setConfig(defaultSkins());
+const gcfg = applyGalaxyToEquipment(defaultSkins()); gcfg.cape.enabled = true;
+const galaxy = new SkinManager(); galaxy.setConfig(gcfg);
+const X = (i) => (i - 4.5) * 1.55;
+const mixers = [];
+function character(mgr, withCape, i, label, anim = 'run') {
+  const c = createCharacter(); applyLook(c.root, { hair: 'spiky', accessories: [] });
+  mgr.applyCharacter(c.root);
+  let cape = null;
+  if (withCape) { cape = new Cape(); c.bones.chest.add(cape.mesh); cape.mesh.position.set(0, 0.2, -0.17); mgr.applyCape(cape); }
+  const m = new THREE.AnimationMixer(c.root); m.clipAction(c.clips.find((x) => x.name === anim)).play(); mixers.push({ m, cape });
+  const g = new THREE.Group(); g.add(c.root); if (withCape) g.rotation.y = Math.PI * 0.8; place(g, X(i), label);
+}
+character(normal, false, 0, '1 perso normal');
+character(galaxy, false, 1, '2 perso Galaxie');
+character(normal, true, 2, '3 cape normale');
+character(galaxy, true, 3, '4 cape Galaxie');
+const coinN = buildCoinPreview({ ...defaultSkins().coin }, null, null); coinN.position.y = 1; coinN.scale.setScalar(1.6);
+place(coinN, X(4), '5 pièce normale');
+const coinG = buildCoinPreview({ ...gcfg.coin }, null, null); coinG.position.y = 1; coinG.scale.setScalar(1.6);
+place(coinG, X(5), '6 pièce Galaxie');
+const img = await new THREE.TextureLoader().loadAsync('/public/assets/textures/coins/chihuahua.webp').catch(() => null);
+const coinI = buildCoinPreview({ ...defaultSkins().coin, fit: 'contain' }, img, null); coinI.position.y = 1; coinI.scale.setScalar(1.6);
+place(coinI, X(6), '7 pièce image');
+const bN = buildHoverboard('futuristic', '#65d9ff', '#ffffff'); normal.applyBoard(bN); bN.position.y = 0.4; bN.rotation.set(0.5, 0.6, 0);
+place(bN, X(7), '8 board normal');
+const bG = buildHoverboard('futuristic', '#65d9ff', '#ffffff'); galaxy.applyBoard(bG); bG.position.y = 0.4; bG.rotation.set(0.5, 0.6, 0);
+place(bG, X(8), '9 board Galaxie');
+// le train n'est JAMAIS passé au SkinManager : il doit rester normal
+const train = buildTrain('urban', { body: 0x2f7fd8, stripe: 0xffd23a, accent: 0xff4f6d, destination: 'TEST' }, 1);
+train.scale.setScalar(0.32); train.rotation.y = -0.9;
+place(train, X(9), '10 train normal');
+window.trainMaterials = () => { const n = []; train.traverse((o) => o.isMesh && n.push(o.material.name)); return n; };
+document.getElementById('l').innerHTML = labels.map((l) => `<span>${l}</span>`).join('');
+const clock = new THREE.Clock();
+let frames = 0;
+function loop() {
+  const dt = Math.min(0.05, clock.getDelta());
+  updateSkins(dt);
+  for (const { m, cape } of mixers) { m.update(dt); cape?.update(dt, { speed: 18, vy: 0, lateral: 0 }); }
+  coinN.rotation.y += dt * 0.8; coinG.rotation.y += dt * 0.8; coinI.rotation.y = 0.35;
+  r.render(scene, cam);
+  if (++frames === 40) window.__done = true;
+  requestAnimationFrame(loop);
+}
+loop();
+</script></body></html>

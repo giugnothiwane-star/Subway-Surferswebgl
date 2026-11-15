@@ -160,6 +160,15 @@ input[type=color] { width: 100%; height: 36px; border: 1px solid var(--line); bo
 .checks { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .checks label { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; }
 
+/* Studio : skins */
+.btn.galaxybtn, .btn.primary.galaxybtn { width: 100%; min-height: 54px; font-size: 15px; letter-spacing: .04em; background: linear-gradient(120deg, #2a0b5e, #7b2ff7 40%, #ff3bd4 70%, #2fd5ff); color: #fff; border: 0; box-shadow: 0 0 18px rgba(173, 92, 255, .45); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+@media (max-width: 520px) { .studio .subbar .segmented { flex-basis: 100%; justify-content: space-between; margin: 4px 0 0; } .studio .subbar .segmented button { flex: 1; } }
+.skinmatrix { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.sliders { display: grid; gap: 2px; }
+.sliders .field span { display: flex; justify-content: space-between; gap: 8px; }
+.sliders .field span b { color: var(--lime); font-variant-numeric: tabular-nums; }
+#st-charmode, #st-coinfit { margin: 4px 0 8px; }
+
 /* Paramètres : touches */
 .keys { display: grid; gap: 6px; }
 .keyrow { display: grid; grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }

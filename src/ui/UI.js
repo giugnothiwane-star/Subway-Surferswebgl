@@ -8,6 +8,9 @@ import { ensureMissions } from '../gameplay/Missions.js';
 import { HAIR_STYLES, ACCESSORIES } from '../models/Character.js';
 import { AssetDB } from '../core/Storage.js';
 import { ACTIONS, SLOTS, bindKey, cloneDefaults, keyLabel } from '../gameplay/keymap.js';
+import { SKINS, DEFAULT_GALAXY, setGalaxyParams } from '../skins/SkinShader.js';
+import { applyGalaxyToEquipment, defaultSkins, removeSkinEverywhere } from '../skins/SkinManager.js';
+import { defaultSave } from '../core/save.js';
 
 const $ = (id) => document.getElementById(id);
 function h(tag, props = {}, ...children) {
@@ -333,6 +336,7 @@ export class UI {
     $('s-reduced').checked = st.reducedMotion;
     $('s-fps').checked = st.showFps;
     $('s-touch').checked = st.touchButtons;
+    $('s-skinanim').checked = this.save.skins.animated;
     $('s-saturation').value = st.saturation;
     $('s-satval').textContent = `${Math.round(st.saturation * 100)} %`;
     this.renderKeys();
@@ -369,6 +373,7 @@ export class UI {
     $('s-reduced').addEventListener('change', (e) => { st().reducedMotion = e.target.checked; this.game.setReducedMotion(e.target.checked); persist(); });
     $('s-fps').addEventListener('change', (e) => { st().showFps = e.target.checked; this.applyBodyClasses(); persist(); });
     $('s-touch').addEventListener('change', (e) => { st().touchButtons = e.target.checked; this.applyBodyClasses(); persist(); });
+    $('s-skinanim').addEventListener('change', (e) => { this.save.skins.animated = e.target.checked; this.game.applySkins(); persist(); });
     $('s-saturation').addEventListener('input', (e) => {
       st().saturation = Number(e.target.value);
       $('s-satval').textContent = `${Math.round(st().saturation * 100)} %`;
@@ -493,6 +498,7 @@ export class UI {
     $('st-glow').value = s.studio.coinGlow.color;
     $('st-glowint').value = s.studio.coinGlow.intensity;
     this.renderCoinSkins();
+    this.syncSkins();
     $('st-trainon').checked = s.studio.trainLivery.enabled;
     $('st-t1').value = s.studio.trainLivery.body;
     $('st-t2').value = s.studio.trainLivery.stripe;
@@ -508,12 +514,13 @@ export class UI {
   }
 
   bindStudio() {
+    this.bindSkins();
     const s = () => this.save;
     const msg = (t, ok = true) => { $('st-msg').textContent = t; $('st-msg').style.color = ok ? 'var(--lime)' : 'var(--danger)'; };
     document.querySelectorAll('#st-tabs button').forEach((b) => b.addEventListener('click', () => {
       document.querySelectorAll('#st-tabs button').forEach((x) => x.classList.toggle('on', x === b));
       document.querySelectorAll('.tabpane').forEach((p) => p.classList.toggle('on', p.dataset.pane === b.dataset.tab));
-      const subject = { look: 'character', board: 'board', coin: 'coin', train: 'train', model: 'character', light: 'character' }[b.dataset.tab];
+      const subject = { skins: 'character', look: 'character', cape: 'cape', board: 'board', coin: 'coin', train: 'train', model: 'character', light: 'character' }[b.dataset.tab];
       this.setSubject(subject);
     }));
     document.querySelectorAll('#st-subject button').forEach((b) => b.addEventListener('click', () => this.setSubject(b.dataset.subject)));
@@ -552,6 +559,8 @@ export class UI {
       }
     });
     imageInput('st-shirtfile', 'shirt', (t) => { this.game.applyCustom({ shirtTexture: t }); this.setSubject('character', true); });
+    imageInput('st-skinfile', 'skin', (t) => { s().skins.character.skin = 'texture'; this.game.applyCustom({ skinTexture: t }); this.syncSkins(); this.setSubject('character', true); });
+    imageInput('st-capefile', 'cape', (t) => { s().skins.cape.enabled = true; this.game.applyCustom({ capeTexture: t }); this.syncSkins(); this.setSubject('cape', true); });
     imageInput('st-boardfile', 'board', (t) => { this.game.applyCustom({ boardTexture: t }); this.setSubject('board', true); });
     imageInput('st-coinfile', 'coin', (t) => { s().studio.coinPreset = null; this.game.applyCustom({ coinTexture: t }); this.renderCoinSkins(); this.setSubject('coin', true); });
     imageInput('st-trainfile', 'train', (t) => { s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; this.game.applyCustom({ trainTexture: t }); this.setSubject('train', true); });
@@ -565,7 +574,7 @@ export class UI {
         this.game.applyCharacter();
         $('st-modelinfo').textContent = 'Personnage MNNROW actif.';
       } else {
-        const key = { shirt: 'shirtTexture', board: 'boardTexture', coin: 'coinTexture', train: 'trainTexture' }[slot];
+        const key = { shirt: 'shirtTexture', board: 'boardTexture', coin: 'coinTexture', train: 'trainTexture', cape: 'capeTexture', skin: 'skinTexture' }[slot];
         this.game.custom[key] = null;
         if (slot === 'coin') { s().studio.coinPreset = null; this.renderCoinSkins(); }
         this.game.applyCustom({});
@@ -599,17 +608,140 @@ export class UI {
       const d = this.save;
       d.look = {};
       d.board = { color: null, color2: null };
-      d.studio = { coinTint: null, coinPreset: null, coinGlow: { enabled: false, color: '#ffd23a', intensity: 0.6 }, trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' }, lighting: { exposure: 1, sun: 1, hemi: 1 }, files: { shirt: null, coin: null, board: null, train: null, model: null } };
+      d.studio = defaultSave().studio;
+      d.skins = defaultSkins();
       try { await AssetDB.clear(); } catch { /* ignoré */ }
       this.game.custom = {};
       const rig = await this.game.assets.loadCharacter();
       this.game.player.setRig(rig);
       this.game.applyCustom({});
+      this.game.applySkins();
       this.game.env.setLighting(d.studio.lighting);
       this.storage.save();
       this.syncStudio();
       msg('Personnalisations réinitialisées.');
     });
+  }
+
+  // ---- skins (Galaxie…) ---------------------------------------------------------------
+  skinOptions(select) {
+    if (select.options.length) return;
+    select.replaceChildren(...SKINS.map((k) => h('option', { value: k.id, text: k.name })));
+  }
+
+  // Champ curseur avec libellé et valeur affichée.
+  slider(label, min, max, step, value, fmtV, onInput) {
+    const out = h('b', { text: fmtV(value) });
+    const input = h('input', { type: 'range', min, max, step, value: String(value), oninput: (e) => { const v = Number(e.target.value); out.textContent = fmtV(v); onInput(v); } });
+    return h('label', { class: 'field' }, h('span', {}, `${label} : `, out), input);
+  }
+
+  syncSkins() {
+    const sk = this.save.skins;
+    for (const id of ['st-charskin', 'st-capeskin', 'st-boardskin', 'st-coinskin']) this.skinOptions($(id));
+    $('st-charskin').value = sk.character.skin;
+    $('st-capeskin').value = sk.cape.skin;
+    $('st-boardskin').value = sk.board.skin;
+    $('st-coinskin').value = sk.coin.skin;
+    document.querySelectorAll('#st-charmode button').forEach((b) => b.classList.toggle('on', b.dataset.mode === sk.character.mode));
+    $('st-capeon').checked = sk.cape.enabled;
+    $('st-capecolor').value = sk.cape.color;
+    $('st-galanim').checked = sk.galaxy.animated;
+    document.querySelectorAll('#st-coinfit button').forEach((b) => b.classList.toggle('on', b.dataset.fit === sk.coin.fit));
+    $('st-coinedge').value = sk.coin.edgeColor;
+    // matrice : un skin par catégorie, indépendamment
+    const cats = [['character', 'Personnage', sk.character], ['cape', 'Cape', sk.cape], ['coin', 'Pièces', sk.coin], ['board', 'Hoverboard', sk.board]];
+    $('st-skinmatrix').replaceChildren(...cats.map(([key, label, obj]) => {
+      const sel = h('select', { 'aria-label': `Skin : ${label}`, onchange: (e) => { obj.skin = e.target.value; if (key === 'cape' && obj.skin !== 'normal') sk.cape.enabled = true; this.skinChanged(key === 'coin' ? 'coin' : key); this.syncSkins(); } });
+      this.skinOptions(sel);
+      sel.value = obj.skin;
+      return h('label', { class: 'field' }, label, sel);
+    }));
+    // paramètres Galaxie (appliqués en direct via des uniformes partagés)
+    const g = sk.galaxy;
+    const live = () => { setGalaxyParams(g); this.persistSoon(); };
+    $('st-galcolors').replaceChildren(...[['colorA', 'Fond spatial'], ['colorB', 'Nébuleuses'], ['colorC', 'Volutes'], ['starColor', 'Étoiles']].map(([k, label]) =>
+      h('label', {}, label, h('input', { type: 'color', value: g[k], oninput: (e) => { g[k] = e.target.value; live(); } }))));
+    const pct = (v) => `${Math.round(v * 100)} %`;
+    const x = (v) => `×${v.toFixed(2)}`;
+    $('st-galsliders').replaceChildren(
+      this.slider('Densité d\'étoiles', 0, 1, 0.01, g.starDensity, pct, (v) => { g.starDensity = v; live(); }),
+      this.slider('Éclat des étoiles', 0, 3, 0.05, g.starBrightness, x, (v) => { g.starBrightness = v; live(); }),
+      this.slider('Scintillement', 0, 1, 0.05, g.sparkle, pct, (v) => { g.sparkle = v; live(); }),
+      this.slider('Intensité des nébuleuses', 0, 2, 0.05, g.nebulaIntensity, x, (v) => { g.nebulaIntensity = v; live(); }),
+      this.slider('Intensité lumineuse', 0, 2, 0.05, g.glowIntensity, x, (v) => { g.glowIntensity = v; live(); }),
+      this.slider('Contraste', 0.5, 2, 0.05, g.contrast, x, (v) => { g.contrast = v; live(); }),
+      this.slider('Échelle du motif', 0.3, 3, 0.05, g.noiseScale, x, (v) => { g.noiseScale = v; live(); }),
+      this.slider('Rotation', -180, 180, 1, g.rotation, (v) => `${Math.round(v)}°`, (v) => { g.rotation = v; live(); }),
+      this.slider('Vitesse d\'animation', 0, 3, 0.05, g.animationSpeed, x, (v) => { g.animationSpeed = v; live(); }),
+    );
+    // cadrage et matière des pièces (recomposition limitée en fréquence)
+    const c = sk.coin;
+    const coin = () => this.coinChanged();
+    $('st-coinsliders').replaceChildren(
+      this.slider('Zoom', 0.3, 3, 0.05, c.zoom, x, (v) => { c.zoom = v; coin(); }),
+      this.slider('Décalage horizontal', -0.5, 0.5, 0.01, c.offsetX, pct, (v) => { c.offsetX = v; coin(); }),
+      this.slider('Décalage vertical', -0.5, 0.5, 0.01, c.offsetY, pct, (v) => { c.offsetY = v; coin(); }),
+      this.slider('Rotation', -180, 180, 1, c.rotation, (v) => `${Math.round(v)}°`, (v) => { c.rotation = v; coin(); }),
+    );
+    $('st-coinpbr').replaceChildren(
+      this.slider('Métallicité', 0, 1, 0.05, c.metalness, pct, (v) => { c.metalness = v; coin(); }),
+      this.slider('Rugosité', 0, 1, 0.05, c.roughness, pct, (v) => { c.roughness = v; coin(); }),
+      this.slider('Brillance (reflets)', 0, 2, 0.05, c.shine, x, (v) => { c.shine = v; coin(); }),
+    );
+    $('st-skintexrow').classList.toggle('hidden', sk.character.skin !== 'texture');
+  }
+
+  persistSoon() {
+    clearTimeout(this._persistT);
+    this._persistT = setTimeout(() => this.storage.save(), 400);
+  }
+
+  skinChanged(subject) {
+    this.game.applySkins();
+    this.persistSoon();
+    if (subject) this.setSubject(subject, true);
+  }
+
+  coinChanged() {
+    if (!this._coinT) this._coinT = throttle(() => { this.game.applySkins(); this.setSubject('coin', true); this.persistSoon(); }, 140);
+    this._coinT();
+  }
+
+  bindSkins() {
+    const sk = () => this.save.skins;
+    const msg = (t) => { $('st-msg').textContent = t; $('st-msg').style.color = 'var(--lime)'; };
+    $('st-galaxyall').addEventListener('click', () => {
+      this.click();
+      applyGalaxyToEquipment(sk());
+      this.skinChanged('character');
+      this.syncSkins();
+      msg('✦ Galaxie appliquée : personnage, vêtements, cape, pièces et hoverboard (trains inchangés).');
+    });
+    $('st-skinsoff').addEventListener('click', () => {
+      this.click();
+      removeSkinEverywhere(sk());
+      this.skinChanged('character');
+      this.syncSkins();
+      msg('Skins retirés : matériaux d\'origine restaurés (tes images restent sauvegardées).');
+    });
+    $('st-galreset').addEventListener('click', () => {
+      this.click();
+      sk().galaxy = { ...DEFAULT_GALAXY };
+      this.skinChanged();
+      this.syncSkins();
+    });
+    $('st-galanim').addEventListener('change', (e) => { sk().galaxy.animated = e.target.checked; this.skinChanged(); });
+    $('st-charskin').addEventListener('change', (e) => { sk().character.skin = e.target.value; this.skinChanged('character'); this.syncSkins(); });
+    $('st-capeskin').addEventListener('change', (e) => { sk().cape.skin = e.target.value; sk().cape.enabled = true; this.skinChanged('cape'); this.syncSkins(); });
+    $('st-boardskin').addEventListener('change', (e) => { sk().board.skin = e.target.value; this.skinChanged('board'); this.syncSkins(); });
+    $('st-coinskin').addEventListener('change', (e) => { sk().coin.skin = e.target.value; this.skinChanged('coin'); this.syncSkins(); });
+    document.querySelectorAll('#st-charmode button').forEach((b) => b.addEventListener('click', () => { sk().character.mode = b.dataset.mode; this.skinChanged('character'); this.syncSkins(); }));
+    document.querySelectorAll('#st-coinfit button').forEach((b) => b.addEventListener('click', () => { sk().coin.fit = b.dataset.fit; this.coinChanged(); this.syncSkins(); }));
+    $('st-capeon').addEventListener('change', (e) => { sk().cape.enabled = e.target.checked; this.skinChanged('cape'); });
+    const capeColor = throttle(() => this.skinChanged(), 120);
+    $('st-capecolor').addEventListener('input', (e) => { sk().cape.color = e.target.value; sk().cape.enabled = true; $('st-capeon').checked = true; capeColor(); });
+    $('st-coinedge').addEventListener('input', (e) => { sk().coin.edgeColor = e.target.value; this.coinChanged(); });
   }
 
   renderCoinSkins() {
