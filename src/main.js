@@ -39,9 +39,16 @@ async function restoreCustomFiles(game, storage) {
   }
   if (storage.data.studio.coinPreset && !custom.coinTexture) {
     const { COIN_SKINS } = await import('./data/catalog.js');
-    const skin = COIN_SKINS.find((c) => c.id === storage.data.studio.coinPreset);
+    const preset = storage.data.studio.coinPreset;
+    const skin = COIN_SKINS.find((c) => c.id === preset);
     try {
       if (skin) custom.coinTexture = await game.assets.loadTexture(skin.file);
+      else if (preset.startsWith('local:')) {
+        // image personnelle (« Mes images ») : stockée uniquement sur l'appareil
+        const rec = await AssetDB.get(`coinlib:${preset.slice(6)}`);
+        if (rec?.blob) custom.coinTexture = await game.assets.imageTexture(rec.blob);
+        else storage.data.studio.coinPreset = null;
+      }
     } catch (e) {
       console.warn('[MNNROW] texture de pièce indisponible :', e.message);
     }

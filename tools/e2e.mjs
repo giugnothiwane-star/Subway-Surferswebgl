@@ -357,6 +357,32 @@ await check('Skin Galaxie : équipement complet, trains jamais modifiés, conser
   return `perso + cape + pièces + board en Galaxie ; ${a.trains.length} matériaux de trains intacts ; conservé après rechargement`;
 });
 
+await check('Mes images : deux images locales, choix, rechargement, suppression', async () => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.click('[data-nav="studio"]');
+  await page.locator('#st-tabs [data-tab="coin"]').click();
+  for (const name of ['sonic.png', 'bob.png']) {
+    await page.setInputFiles('#st-coinfile', { name, mimeType: 'image/png', buffer: png });
+    await waitFor((n) => document.getElementById('st-msg').textContent.includes(n.replace('.png', '')), name, 10000);
+  }
+  const a = await game(() => ({ lib: window.__MNNROW.game.save.studio.coinLib.map((e) => e.name), preset: window.__MNNROW.game.save.studio.coinPreset, faces: !!window.__MNNROW.game.entities.coinFaces }));
+  await page.click('[data-nav="studio-exit"]');
+  await page.reload();
+  await waitFor(() => window.__MNNROW && document.getElementById('menu').classList.contains('active'), null, 120000);
+  const b = await game(() => ({ lib: window.__MNNROW.game.save.studio.coinLib.length, preset: window.__MNNROW.game.save.studio.coinPreset, tex: !!window.__MNNROW.game.custom.coinTexture }));
+  await page.click('[data-nav="studio"]');
+  await page.locator('#st-tabs [data-tab="coin"]').click();
+  await page.locator('#st-coinlib .skindel').first().click();
+  await page.locator('#st-coinlib .skindel').first().click();
+  await wait(500);
+  const c = await game(() => ({ lib: window.__MNNROW.game.save.studio.coinLib.length, preset: window.__MNNROW.game.save.studio.coinPreset }));
+  await page.click('[data-nav="studio-exit"]');
+  assert(a.lib.join() === 'sonic,bob' && a.preset.startsWith('local:') && a.faces, JSON.stringify(a));
+  assert(b.lib === 2 && b.preset === a.preset && b.tex, JSON.stringify(b));
+  assert(c.lib === 0 && c.preset === null, JSON.stringify(c));
+  return 'images ajoutées, conservées après rechargement, supprimées proprement';
+});
+
 await check('19. Redimensionnement / orientation paysage', async () => {
   await page.setViewportSize({ width: 915, height: 412 });
   await wait(700);

@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MNNROW — faces de pièces 3D</title>
+<style>body{margin:0;background:#111}canvas{display:block}</style></head><body>
+<script type="module">
+// Compare le style « encastré 3D » et « plein » des faces de pièces.
+// Images locales facultatives dans dev/_local/ (jamais versionnées).
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { buildCoinPreview } from '/src/skins/CoinFactory.js';
+import { defaultSkins } from '/src/skins/SkinManager.js';
+const W = 1600, H = 820;
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2c3442);
+scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.0)); const d = new THREE.DirectionalLight(0xffffff, 2.4); d.position.set(-3, 5, 6); scene.add(d);
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 100); cam.position.set(0, 0, 17);
+const load = (u) => new THREE.TextureLoader().loadAsync(u).catch(() => null);
+const imgs = (await Promise.all(['/dev/_local/sonic.png', '/dev/_local/bob.png', '/public/assets/textures/coins/husky.webp', '/public/assets/textures/coins/chihuahua.webp'].map(load))).filter(Boolean);
+imgs.forEach((t, i) => {
+  [['emboss', 0], ['emboss', 0.75], ['flat', 0]].forEach(([style, ry], j) => {
+    const c = buildCoinPreview({ ...defaultSkins().coin, style }, t, null);
+    c.scale.setScalar(2.3);
+    c.position.set(-6.6 + i * 4.4 + (j === 2 ? 0 : 0), 2.9 - j * 2.9, 0);
+    c.rotation.y = ry;
+    scene.add(c);
+  });
+});
+r.render(scene, cam); window.__done = true;
+</script></body></html>

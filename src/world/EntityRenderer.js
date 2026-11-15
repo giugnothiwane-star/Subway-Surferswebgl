@@ -120,24 +120,34 @@ export class EntityRenderer {
     }
     // géométrie sans symbole gravé quand une image couvre la face
     if (!this.coinGeos) this.coinGeos = { symbol: this.coins.geometry, plain: null };
-    if (useImg && !this.coinGeos.plain) this.coinGeos.plain = coinGeometry({ symbol: false }).geometry;
+    const wide = cfg.style !== 'flat';
+    if (useImg && (!this.coinGeos.plain || this.coinGeos.wide !== wide)) {
+      this.coinGeos.plain?.dispose();
+      this.coinGeos.plain = coinGeometry({ symbol: false, wide }).geometry;
+      this.coinGeos.wide = wide;
+    }
     this.coins.geometry = useImg ? this.coinGeos.plain : this.coinGeos.symbol;
     this.coinScale = useImg || cfg.skin !== 'normal' ? 1.3 : 1; // plus grandes pour bien voir le motif
     // faces image : une seule texture GPU partagée par toutes les pièces
-    const faceSig = useImg ? `${custom.coinTexture.uuid}|${cfg.fit}|${cfg.zoom}|${cfg.offsetX}|${cfg.offsetY}|${cfg.rotation}|${cfg.roughness}|${cfg.metalness}|${cfg.shine}` : '';
+    const faceSig = useImg ? `${custom.coinTexture.uuid}|${cfg.fit}|${cfg.zoom}|${cfg.offsetX}|${cfg.offsetY}|${cfg.rotation}|${cfg.roughness}|${cfg.metalness}|${cfg.shine}|${cfg.style}|${cfg.outline}` : '';
     if (faceSig === this.faceSig) return;
     this.faceSig = faceSig;
     if (this.coinFaces) {
       this.group.remove(this.coinFaces);
       this.coinFaces.material.map?.dispose();
+      this.coinFaces.material.normalMap?.dispose();
       this.coinFaces.material.dispose();
       this.coinFaces.dispose();
       this.coinFaces = null;
     }
     if (!useImg) return;
-    if (!this.faceGeo) this.faceGeo = coinFaceGeometry();
-    const tex = composeCoinFace(custom.coinTexture.image, cfg);
-    this.coinFaces = new THREE.InstancedMesh(this.faceGeo, coinFaceMaterial(tex, cfg), COIN_CAP);
+    if (this.faceGeoStyle !== cfg.style) {
+      this.faceGeo?.dispose();
+      this.faceGeo = coinFaceGeometry(cfg.style);
+      this.faceGeoStyle = cfg.style;
+    }
+    const face = composeCoinFace(custom.coinTexture.image, cfg);
+    this.coinFaces = new THREE.InstancedMesh(this.faceGeo, coinFaceMaterial(face, cfg), COIN_CAP);
     this.coinFaces.instanceMatrix = this.coins.instanceMatrix; // mêmes matrices que les pièces
     this.coinFaces.count = this.coins.count;
     this.coinFaces.frustumCulled = false;

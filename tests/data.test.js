@@ -116,3 +116,10 @@ test('missions : progression réelle, récompense une seule fois, montée de niv
   assert.equal(st.active.length, 3);
   assert.ok(ensureMissions(st).active.every((m) => !m.done));
 });
+
+test('Mes images : liste locale validée, sélection locale seulement si elle existe', () => {
+  const v = validateSave({ studio: { coinLib: [{ id: 'abc1', name: 'Sonic' }, { id: '../x' }, 'mauvais'], coinPreset: 'local:abc1' } });
+  assert.deepEqual(v.studio.coinLib, [{ id: 'abc1', name: 'Sonic' }]);
+  assert.equal(v.studio.coinPreset, 'local:abc1');
+  assert.equal(validateSave({ studio: { coinLib: [], coinPreset: 'local:zzz' } }).studio.coinPreset, null);
+});

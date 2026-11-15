@@ -56,6 +56,8 @@ export function validateSkins(input) {
     d.coin.metalness = num(c.metalness, 1, 0, 1);
     d.coin.roughness = num(c.roughness, 0.22, 0, 1);
     d.coin.shine = num(c.shine, 1, 0, 2);
+    d.coin.style = c.style === 'flat' ? 'flat' : 'emboss';
+    d.coin.outline = c.outline !== false;
   }
   if (isObj(input.galaxy)) {
     const g = input.galaxy;
