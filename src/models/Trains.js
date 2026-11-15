@@ -40,6 +40,12 @@ function liveryMaterials(style, livery) {
   const { customTexture, ...plain } = livery;
   const key = `${style}:${JSON.stringify(plain)}:${customTexture ? customTexture.uuid : ''}`;
   if (liveryMats.has(key)) return liveryMats.get(key);
+  if (liveryMats.size > 24) {
+    // livrées personnalisées successives : on libère les plus anciennes
+    const [oldKey, old] = liveryMats.entries().next().value;
+    for (const m of Object.values(old)) m.dispose();
+    liveryMats.delete(oldKey);
+  }
   const nose = style === 'modern' ? 4.2 / CAR : 0;
   const side = new THREE.MeshStandardMaterial({ map: customTexture || trainSideTexture(style, plain), metalness: 0.35, roughness: 0.4 });
   side.name = `TrainSide_${style}`;

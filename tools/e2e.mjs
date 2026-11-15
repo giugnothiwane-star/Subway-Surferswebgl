@@ -280,6 +280,28 @@ await check('15b. Studio : couleur et image appliquées puis réinitialisées', 
   return `refus : « ${err.trim()} »`;
 });
 
+await check('Studio : glisser un sélecteur de couleur ne fait pas fuir la mémoire GPU', async () => {
+  await page.click('[data-nav="studio"]');
+  await page.locator('#st-tabs [data-tab="train"]').click();
+  const t0 = await game(() => window.__MNNROW.game.r.renderer.info.memory.textures);
+  for (let i = 0; i < 40; i++) {
+    await page.evaluate((i) => { const el = document.getElementById('st-t1'); el.value = '#' + (0x102030 + i * 0x030507).toString(16).slice(-6); el.dispatchEvent(new Event('input', { bubbles: true })); }, i);
+    await wait(30);
+  }
+  await wait(1500);
+  const t1 = await game(() => window.__MNNROW.game.r.renderer.info.memory.textures);
+  await page.click('[data-nav="studio-exit"]');
+  assert(t1 - t0 < 25, `textures ${t0} -> ${t1}`);
+  return `textures GPU ${t0} -> ${t1} après 40 couleurs`;
+});
+
+await check('Rejouer juste après une fin de partie : pas de ralenti ni de danse résiduels', async () => {
+  const r = await game(() => { const g = window.__MNNROW.game; g.slowMo = 0.6; g.celebrate = 2; g.startRun('RESET'); return { slow: g.slowMo, cel: g.celebrate }; });
+  await game(() => window.__MNNROW.game.quitToMenu());
+  assert(r.slow === 0 && r.cel === 0, JSON.stringify(r));
+  return 'slowMo = 0, celebrate = 0';
+});
+
 await check('19. Redimensionnement / orientation paysage', async () => {
   await page.setViewportSize({ width: 915, height: 412 });
   await wait(700);

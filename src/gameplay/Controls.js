@@ -76,6 +76,16 @@ export class Controls {
     const p = this.pointers.get(e.pointerId);
     this.pointers.delete(e.pointerId);
     if (!p || p.fired || !this.enabled) return;
+    // geste rapide dont les « move » ont été regroupés : on le traite comme un swipe
+    const dx = e.clientX - p.x;
+    const dy = e.clientY - p.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) >= this.threshold()) {
+      if (Math.abs(dx) > Math.abs(dy)) this.onAction(dx > 0 ? 'right' : 'left', 'swipe');
+      else this.onAction(dy < 0 ? 'jump' : 'roll', 'swipe');
+      this.lastTap = 0;
+      return;
+    }
+    if (Math.max(Math.abs(dx), Math.abs(dy)) > this.threshold() * 0.5) return; // ni tap ni swipe
     const now = performance.now();
     if (now - p.t < 250) {
       if (now - this.lastTap < 320) {

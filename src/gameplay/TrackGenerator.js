@@ -425,6 +425,9 @@ export class TrackGenerator {
       else keep.push(e);
     }
     this.entities = keep;
+    // personne ne consomme ces listes en jeu : on les vide pour ne pas accumuler
+    this.spawned.length = 0;
+    this.removed.length = 0;
     this.zones = this.zones.filter((z) => z.s1 > behind - 200);
     this.path = this.path.filter((p) => p.s1 > behind + 10);
   }

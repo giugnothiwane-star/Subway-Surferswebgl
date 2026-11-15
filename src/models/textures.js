@@ -15,8 +15,26 @@ function canvas(w, h) {
   return c;
 }
 
+// Familles dont les clés dépendent de couleurs choisies par le joueur : on borne
+// leur nombre (les plus anciennes sont libérées du GPU ; Three.js les ré-envoie
+// automatiquement si elles servent encore).
+const DYNAMIC = { trainSide: 10, trainRoof: 10, trainFront: 10, board: 8, container: 12 };
+
 export function makeTexture(key, w, h, draw, { srgb = true, repeat = false, mipmaps = true } = {}) {
-  if (cache.has(key)) return cache.get(key);
+  if (cache.has(key)) {
+    const t = cache.get(key);
+    cache.delete(key); // remet en fin de liste (récemment utilisée)
+    cache.set(key, t);
+    return t;
+  }
+  const family = key.split(':')[0];
+  if (DYNAMIC[family]) {
+    const same = [...cache.keys()].filter((k) => k.startsWith(family + ':'));
+    for (let i = 0; i <= same.length - DYNAMIC[family]; i++) {
+      cache.get(same[i]).dispose();
+      cache.delete(same[i]);
+    }
+  }
   const c = canvas(w, h);
   const ctx = c.getContext('2d');
   draw(ctx, w, h);

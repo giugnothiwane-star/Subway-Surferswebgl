@@ -111,7 +111,7 @@ export class PlayerView {
   setBoard(style, color, color2, customTexture = null) {
     if (this.board) {
       this.boardHolder.remove(this.board);
-      this.board.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); } });
+      this.board.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); for (const m of [].concat(o.material)) m.dispose(); } });
     }
     this.board = buildHoverboard(style, color, color2);
     this.board.rotation.y = Math.PI; // nez vers l'avant (-z)

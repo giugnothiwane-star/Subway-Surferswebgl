@@ -232,8 +232,11 @@ code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; 
   #versions, #maps, #missions { width: min(760px, 62vw); }
   .studio-panel { position: absolute; right: calc(20px + var(--sar)); top: calc(80px + var(--sat)); bottom: calc(20px + var(--sab)); width: 400px; max-height: none; margin: 0; }
   .studio .hint { text-align: left; }
-  .touchpad { display: none; }
   .boardbtn { bottom: calc(24px + var(--sab)); }
+}
+/* boutons tactiles masqués seulement avec une souris (pas sur un téléphone en paysage) */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .touchpad { display: none; }
 }
 @media (max-width: 380px) {
   .tile { font-size: 10.5px; min-height: 58px; padding: 9px 2px 8px; gap: 4px; letter-spacing: -0.01em; }
@@ -256,7 +259,7 @@ code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; 
   .menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .tile { min-height: 48px; padding: 6px 2px; }
   .btn.play { min-height: 48px; font-size: 18px; }
-  .panel-screen, .panel-screen.side { height: 100%; top: 0; width: min(520px, 60vw); left: auto; right: 0; border-radius: 0; }
+  .panel-screen, .panel-screen.side, #versions, #missions, #settings, #maps { height: 100%; top: 0; width: min(520px, 60vw); left: auto; right: 0; border-radius: 0; }
   .touchpad button { width: 54px; height: 46px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; } }

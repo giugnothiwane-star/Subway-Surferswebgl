@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { laneX } from '../gameplay/constants.js';
 import { trainFront } from '../gameplay/obstacles.js';
 import { TrainFactory } from '../models/Trains.js';
-import { barrierHighModel, barrierLowModel, coinGeometry, coinGlowMaterial, powerupModel, rampModel } from '../models/Props.js';
+import { barrierHighModel, barrierLowModel, coinGeometry, coinGlowMaterial, powerupModel, rampModel, sharedMaterials } from '../models/Props.js';
 import { makeTexture } from '../models/textures.js';
 
 const COIN_CAP = 700;
@@ -392,6 +392,23 @@ export class EntityRenderer {
     this.clear();
     this.scene.remove(this.group);
     this.trains.dispose();
+    // libère tout ce qui appartient à ce rendu (les matériaux partagés et les
+    // textures en cache sont conservés pour les cartes suivantes)
+    const geos = new Set();
+    const mats = new Set();
+    const collect = (root) => root?.traverse((o) => {
+      if (o.geometry) geos.add(o.geometry);
+      for (const m of [].concat(o.material || [])) if (!sharedMaterials.has(m)) mats.add(m);
+    });
+    collect(this.group);
+    for (const pool of Object.values(this.pools)) { collect(pool.template); pool.free.forEach(collect); }
+    for (const f of this.flares) collect(f);
+    if (this.coinGeos?.plain) geos.add(this.coinGeos.plain);
+    if (this.coinGeos?.symbol) geos.add(this.coinGeos.symbol);
+    for (const g of geos) g.dispose();
+    for (const m of mats) if (!m.map || !m.map.name?.includes(':')) m.dispose();
     this.coins.dispose();
+    this.coinGlow.dispose();
+    this.coinFaces?.dispose();
   }
 }

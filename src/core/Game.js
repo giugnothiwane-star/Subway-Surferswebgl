@@ -168,6 +168,11 @@ export class Game {
     this.bot = this.autopilot ? new Bot(this.sim) : null;
     this.finishedMissions = [];
     this.deathTimer = 0;
+    this.slowMo = 0;
+    this.celebrate = 0;
+    this._mt = 0;
+    // suivi des missions sur une copie : rien n'est enregistré si la course est abandonnée
+    this.runMissions = JSON.parse(JSON.stringify(this.save.missions));
     this.rig.groundY = 0;
     this.rig.viewShift(0);
     this.rig.beginTransition();
@@ -193,6 +198,7 @@ export class Game {
 
   pause(reason = 'user') {
     if (this.state !== 'playing') return;
+    if (this.sim && !this.sim.alive) return; // chute en cours : la fin de partie arrive, rien à mettre en pause
     this.state = 'paused';
     this.controls && (this.controls.enabled = false);
     this.audio.duck(true);
@@ -345,7 +351,7 @@ export class Game {
           for (const e of sim.drainEvents()) this.onSimEvent(e);
           if ((this._mt = (this._mt || 0) + dt) > 0.5) {
             this._mt = 0;
-            const done = trackRun(this.save.missions, { ...sim.summary(), newRecord: !this.mode().zen && this.save.best > 0 && sim.score > this.save.best }, this.missionBase);
+            const done = trackRun(this.runMissions, { ...sim.summary(), newRecord: !this.mode().zen && this.save.best > 0 && sim.score > this.save.best }, this.missionBase);
             for (const d of done) {
               this.finishedMissions.push(d);
               this.audio.play('mission');

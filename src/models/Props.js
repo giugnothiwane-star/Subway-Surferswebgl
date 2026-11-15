@@ -7,10 +7,12 @@ import { neonSignTexture, posterTexture, stripeTexture } from './textures.js';
 import { BARRIER, RAMP, TRAIN } from '../gameplay/constants.js';
 
 const mats = {};
+export const sharedMaterials = new Set();
 export function mat(name, params, Type = THREE.MeshStandardMaterial) {
   if (!mats[name]) {
     mats[name] = new Type(params);
     mats[name].name = name;
+    sharedMaterials.add(mats[name]);
   }
   return mats[name];
 }

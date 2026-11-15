@@ -23,6 +23,19 @@ function h(tag, props = {}, ...children) {
   return el;
 }
 const fmt = (n) => Math.floor(n).toLocaleString('fr-FR');
+// Limite la fréquence d'un traitement coûteux (glisser un sélecteur de couleur
+// déclenche des centaines d'événements) ; la dernière valeur est toujours appliquée.
+function throttle(fn, ms = 150) {
+  let last = 0;
+  let timer = null;
+  return (...args) => {
+    const run = () => { last = performance.now(); timer = null; fn(...args); };
+    const wait = ms - (performance.now() - last);
+    clearTimeout(timer);
+    if (wait <= 0) run();
+    else timer = setTimeout(run, wait);
+  };
+}
 const POWER_INFO = {
   magnet: ['Aimant', '#ff4d5e'], jetpack: ['Jetpack', '#ffd23a'], multiplier: ['Score ×2', '#b07aff'],
   sneakers: ['Sneakers', '#2fe07a'], shield: ['Bouclier', '#3aa8ff'], hoverboard: ['Hoverboard', '#65d9ff'],
@@ -82,8 +95,9 @@ export class UI {
       else if (this.current === 'settings') this.showScreen(this.prev === 'pause' ? 'pause' : 'menu');
       else if (this.current === 'pause') g.resume();
       else if (this.current === 'gameover') g.quitToMenu();
-      else if (this.current !== 'menu') this.nav('menu');
-      else handled = false;
+      else if (['maps', 'characters', 'boards', 'versions', 'missions'].includes(this.current)) this.nav('menu');
+      else if (this.current === 'menu') handled = false;
+      // chargement, erreur fatale, contexte perdu : on ne touche à rien
       if (handled) {
         try { history.pushState({ mnn: 'game' }, ''); } catch { /* ignoré */ }
       } else history.back(); // depuis le menu : on quitte vraiment
@@ -437,14 +451,16 @@ export class UI {
     document.querySelectorAll('#st-subject button').forEach((b) => b.addEventListener('click', () => this.setSubject(b.dataset.subject)));
     $('st-hair').addEventListener('change', (e) => { s().look.hair = e.target.value; this.game.applyCharacter(); });
     $('st-boardstyle').addEventListener('change', (e) => { s().selected.board = e.target.value; s().board = { color: null, color2: null }; this.game.applyBoard(); this.syncStudio(); });
-    $('st-bc1').addEventListener('input', (e) => { s().board.color = e.target.value; this.game.applyBoard(); });
-    $('st-bc2').addEventListener('input', (e) => { s().board.color2 = e.target.value; this.game.applyBoard(); });
-    $('st-coin').addEventListener('input', (e) => { s().studio.coinTint = e.target.value; this.game.applyCustom({}); this.setSubject('coin', true); });
-    const glow = () => { this.game.applyCustom({}); this.setSubject('coin', true); };
+    const board = throttle(() => this.game.applyBoard());
+    $('st-bc1').addEventListener('input', (e) => { s().board.color = e.target.value; board(); });
+    $('st-bc2').addEventListener('input', (e) => { s().board.color2 = e.target.value; board(); });
+    const coin = throttle(() => { this.game.applyCustom({}); this.setSubject('coin', true); });
+    $('st-coin').addEventListener('input', (e) => { s().studio.coinTint = e.target.value; coin(); });
+    const glow = coin;
     $('st-glowon').addEventListener('change', (e) => { s().studio.coinGlow.enabled = e.target.checked; glow(); });
     $('st-glow').addEventListener('input', (e) => { s().studio.coinGlow.color = e.target.value; s().studio.coinGlow.enabled = true; $('st-glowon').checked = true; glow(); });
     $('st-glowint').addEventListener('input', (e) => { s().studio.coinGlow.intensity = Number(e.target.value); s().studio.coinGlow.enabled = true; $('st-glowon').checked = true; glow(); });
-    const train = () => { this.game.applyCustom({}); this.setSubject('train', true); };
+    const train = throttle(() => { this.game.applyCustom({}); this.setSubject('train', true); }, 200);
     $('st-trainon').addEventListener('change', (e) => { s().studio.trainLivery.enabled = e.target.checked; train(); });
     $('st-t1').addEventListener('input', (e) => { s().studio.trainLivery.body = e.target.value; s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; train(); });
     $('st-t2').addEventListener('input', (e) => { s().studio.trainLivery.stripe = e.target.value; s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; train(); });
@@ -650,7 +666,10 @@ export class UI {
   }
 
   contextLost(on) {
-    if (on) this.showScreen('ctxlost');
-    else if (this.current === 'ctxlost') this.showScreen(this.game.state === 'paused' ? 'pause' : 'menu');
+    if (on) { this.ctxPrev = this.current; this.showScreen('ctxlost'); return; }
+    if (this.current !== 'ctxlost') return;
+    const st = this.game.state;
+    const screen = st === 'paused' ? 'pause' : st === 'gameover' ? 'gameover' : st === 'studio' ? 'studio' : (this.ctxPrev && this.ctxPrev !== 'ctxlost' ? this.ctxPrev : 'menu');
+    this.showScreen(screen);
   }
 }

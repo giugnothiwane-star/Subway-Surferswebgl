@@ -83,6 +83,34 @@ Les tests tournent sur la **version compilée** (`npm run build`), servie par `v
   - portails de tunnel uniformes.
 - **Tests fragiles** (délais fixes trop courts en rendu logiciel) : remplacés par des attentes de conditions.
 
+### Revue complète du code (15 novembre 2026) et correctifs
+
+Un relecteur indépendant a passé tout le code en revue. Les bugs trouvés sont tous corrigés.
+
+| Bug | Statut avant correctif | Correctif | Vérification |
+|---|---|---|---|
+| Glisser un sélecteur de couleur du Studio créait 2 textures GPU par événement, avec un risque de perte du contexte sur mobile | reproduit (+80 textures pour 40 couleurs) | Fréquence limitée à une mise à jour toutes les 150–200 ms, cache borné par famille, matériaux libérés | e2e : +21 textures pour 40 couleurs |
+| Fuite de géométries et de matériaux à chaque changement de carte | reproduit (240 → 274 → 360 géométries) | Libération complète du rendu des entités (pools, pièces, halos, phares) | 72 → 72 → 72 géométries sur 3 tours des 6 cartes |
+| Danse de victoire à la place de la chute après un « Rejouer » rapide | reproduit | Remise à zéro au démarrage | e2e |
+| Nouvelle course qui démarrait au ralenti | reproduit | Remise à zéro au démarrage | e2e |
+| Perte de contexte pendant le Studio ou la fin de partie : mauvais écran au retour | reproduit | Retour à l'écran correspondant à l'état réel du jeu | revue |
+| Boutons tactiles masqués sur les téléphones larges en paysage | reproduit (915×412) | Masqués seulement avec une souris | revue |
+| Panneaux coupés de 64 px en paysage | reproduit (740×360) | Règle CSS paysage complétée | revue |
+| Deux swipes rapides pouvaient être pris pour un double tap (hoverboard) | déduit du code | Un geste long n'est jamais un tap | revue |
+| Pause pendant la chute : course perdue sans enregistrement | déduit du code | Pause ignorée pendant la chute | revue |
+| Progression des missions comptée pour une course abandonnée | déduit du code | Suivi sur une copie, enregistré seulement en fin de partie | revue |
+| Bouton retour pendant le chargement ou une erreur | déduit du code | Seuls les écrans connus sont gérés | revue |
+| Listes internes du générateur qui grossissaient pendant une longue course | déduit du code | Vidées à chaque nettoyage | tests Node |
+
+Ces correctifs s'ajoutent aux améliorations de la même session :
+- caméra (transition, vitesse, inclinaison, fin de partie) ;
+- phares des trains mobiles ;
+- plein écran, écran maintenu allumé, vibrations, bouton retour Android ;
+- installation sur l'écran d'accueil ;
+- mise en page des petits téléphones et du paysage.
+
+Résultat : **25/25 tests Node** et **28/28 vérifications navigateur**.
+
 ## 3. Ce qui n'a PAS pu être testé ici
 
 - **Téléphone Android réel** : performances, chaleur, gestes, Samsung Internet. Aucun appareil disponible.
