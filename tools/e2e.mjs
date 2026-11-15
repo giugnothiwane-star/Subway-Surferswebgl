@@ -338,6 +338,31 @@ await check('19. Redimensionnement / orientation paysage', async () => {
   return `aspect ${r.a.toFixed(2)}`;
 });
 
+await check('Mobile : image jamais étirée quand la zone d\'affichage change sans événement resize', async () => {
+  await page.evaluate(() => { const c = document.getElementById('scene'); c.style.height = '82%'; });
+  await wait(700);
+  const r = await game(() => { const c = document.getElementById('scene'); const gl = window.__MNNROW.game.r.renderer; const v = gl.domElement; return { css: c.clientWidth / c.clientHeight, buf: v.width / v.height, cam: window.__MNNROW.game.rig.camera.aspect }; });
+  await page.evaluate(() => { document.getElementById('scene').style.height = ''; });
+  await wait(500);
+  assert(Math.abs(r.css - r.buf) < 0.02 && Math.abs(r.css - r.cam) < 0.02, JSON.stringify(r));
+  return `rapport écran ${r.css.toFixed(3)} = image ${r.buf.toFixed(3)} = caméra ${r.cam.toFixed(3)}`;
+});
+
+await check('Chronos : durée de course et temps depuis la dernière pièce', async () => {
+  await game(() => { const g = window.__MNNROW.game; g.autopilot = false; g.save.selected.mode = 'standard'; g.startRun('E2ECRASH'); });
+  await waitFor(() => /^0:0[1-9]/.test(document.getElementById('h-time').textContent), null, 20000);
+  const coinTxt = await page.textContent('#h-cointime');
+  await waitFor(() => window.__MNNROW.info().state === 'gameover', null, 60000);
+  const t1 = await page.textContent('#h-time');
+  await wait(1500);
+  const t2 = await page.textContent('#h-time');
+  const go = await page.textContent('#go-time');
+  assert(t1 === t2 && go === t1, `${t1} / ${t2} / ${go}`);
+  assert(/s$/.test(coinTxt), coinTxt);
+  await page.click('#gameover [data-nav="quit"]');
+  return `chrono figé à la chute (${t1}), chrono pièce affiché (${coinTxt.trim()})`;
+});
+
 await check('21. Perte puis restauration du contexte WebGL', async () => {
   await game(() => { window.__MNNROW.game.autopilot = true; window.__MNNROW.game.startRun('CTX'); });
   await wait(800);

@@ -51,9 +51,9 @@ export class CameraRig {
   framing() {
     const portrait = this.aspect < 0.8;
     return {
-      dist: portrait ? 6.6 : 5.8,
-      height: portrait ? 4.6 : 3.8,
-      baseFov: portrait ? 68 : 58,
+      dist: portrait ? 7.6 : 5.8,
+      height: portrait ? 4.9 : 3.8,
+      baseFov: portrait ? 60 : 58,
       lookAhead: portrait ? 15 : 14,
     };
   }
@@ -108,7 +108,8 @@ export class CameraRig {
     const vx = dt > 0 ? (this.pos.x - prevX) / dt : 0;
     this.roll = damp(this.roll, this.reduced ? 0 : Math.max(-0.05, Math.min(0.05, -vx * 0.012)), 8, dt);
     // FOV dynamique selon la vitesse (désactivé en mouvements réduits)
-    const fov = f.baseFov + (this.reduced ? 0 : speedK * 7 + (jet ? 4 : 0));
+    const portraitView = this.aspect < 0.8;
+    const fov = f.baseFov + (this.reduced ? 0 : speedK * (portraitView ? 4 : 7) + (jet ? 3 : 0));
     this.camera.fov = damp(this.camera.fov, fov, 2, dt);
     this.apply(dt);
   }

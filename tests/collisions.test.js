@@ -170,3 +170,14 @@ test('le mode Zen ne termine pas la partie', () => {
   runUntil(sim, 40);
   assert.equal(sim.alive, true);
 });
+
+test('chronos : durée figée à la chute, temps entre deux pièces mesuré', () => {
+  const sim = scenario([{ kind: 'coin', lane: 0, s: 14, y: 1 }, { kind: 'coin', lane: 0, s: 42, y: 1 }, { kind: 'barrier', type: 'low', lane: 0, s: 70 }]);
+  runUntil(sim, 100);
+  assert.equal(sim.alive, false);
+  const t = sim.time;
+  sim.step(1 / 120);
+  assert.equal(sim.time, t); // le chrono de course ne bouge plus après la chute
+  assert.ok(Math.abs(sim.lastCoinGap - 28 / 14) < 0.2, `écart ${sim.lastCoinGap}`);
+  assert.ok(sim.summary().longestNoCoin >= sim.lastCoinGap);
+});

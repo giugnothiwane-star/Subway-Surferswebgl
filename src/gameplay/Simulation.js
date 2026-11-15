@@ -61,6 +61,9 @@ export class Simulation {
     this.lastSide = 0;
     this.onPlatform = false;
     this.deathCause = null;
+    this.lastCoinAt = 0; // chrono « pièce » : temps écoulé depuis la dernière pièce
+    this.lastCoinGap = 0;
+    this.longestNoCoin = 0;
     this.stats = { jumps: 0, rolls: 0, laneChanges: 0, powerups: 0, boards: 0, trainTops: 0, stumbles: 0, dodges: 0 };
     this.events.length = 0;
     this.inputs.length = 0;
@@ -403,6 +406,9 @@ export class Simulation {
     e.collected = true;
     e.collectedAt = this.time;
     if (e.kind === 'coin') {
+      this.lastCoinGap = this.time - this.lastCoinAt;
+      this.longestNoCoin = Math.max(this.longestNoCoin, this.lastCoinGap);
+      this.lastCoinAt = this.time;
       this.coins += COIN.value;
       this.combo++;
       this.comboTimer = 0.6;
@@ -433,6 +439,7 @@ export class Simulation {
       coins: this.coins,
       distance: Math.floor(this.s),
       time: this.time,
+      longestNoCoin: Math.max(this.longestNoCoin, this.alive ? 0 : this.time - this.lastCoinAt),
       stats: { ...this.stats },
       seed: this.generator.seed,
       cause: this.deathCause,

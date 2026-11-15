@@ -49,6 +49,8 @@ export class Game {
       this.particles.scale = p.particles;
     });
     window.addEventListener('resize', () => this.resize());
+    window.visualViewport?.addEventListener('resize', () => this.resize());
+    if ('ResizeObserver' in window) new ResizeObserver(() => this.resize()).observe(canvas);
     window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
     document.addEventListener('visibilitychange', () => this.onVisibility());
   }
@@ -327,6 +329,8 @@ export class Game {
     let dt = Math.min(0.1, Math.max(0, (now - this.clock.last) / 1000));
     this.clock.last = now;
     if (this.r.contextLost) return;
+    // sécurité mobile : barre d'adresse / plein écran peuvent changer la taille sans événement
+    if (this.canvas.clientWidth !== this._cw || this.canvas.clientHeight !== this._ch) this.resize();
     this.time += dt;
     this.r.measure(dt);
     try {
@@ -502,6 +506,8 @@ export class Game {
   // ---- divers ----------------------------------------------------------------------
   resize() {
     const { w, h, aspect } = this.r.resize();
+    this._cw = this.canvas.clientWidth;
+    this._ch = this.canvas.clientHeight;
     this.rig.setAspect(aspect, h);
     this.particles.setPixelScale(h * this.r.dpr);
   }
