@@ -412,12 +412,12 @@ export class Game {
     let target = new THREE.Vector3(0, 1, 0);
     let dist = 4;
     if (subject === 'coin') {
-      const c = coinGeometry();
+      const c = coinGeometry({ symbol: !this.custom.coinTexture });
       const mesh = new THREE.Mesh(c.geometry, c.material);
       mesh.userData.ownGeometry = true;
       mesh.scale.setScalar(2.2);
       if (this.custom.coinTexture) {
-        const face = new THREE.Mesh(new THREE.CircleGeometry(0.27, 28), new THREE.MeshStandardMaterial({ map: this.custom.coinTexture }));
+        const face = new THREE.Mesh(new THREE.CircleGeometry(0.3, 32), new THREE.MeshStandardMaterial({ map: this.custom.coinTexture, alphaTest: 0.45, roughness: 0.45, metalness: 0.15 }));
         face.position.z = 0.063;
         face.userData.ownGeometry = true;
         mesh.add(face);
@@ -425,7 +425,7 @@ export class Game {
       mesh.position.set(0, 1.2, 0);
       this.studioObject = mesh;
       target.set(0, 1.2, 0);
-      dist = 3;
+      dist = 5;
     } else if (subject === 'train') {
       const l = this.save.studio.trainLivery;
       const base = (this.map.trains.liveries.urban || Object.values(this.map.trains.liveries)[0])[0];

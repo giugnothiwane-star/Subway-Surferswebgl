@@ -2,13 +2,31 @@
 
 ## Résumé
 
-**Aucune ressource externe (modèle, texture, son, police, image) n'est intégrée au jeu.**
+**Aucune ressource externe téléchargée (modèle, texture, son, police) n'est intégrée au jeu**, à l'exception des photos fournies par le propriétaire du projet (voir plus bas).
 Aucun fichier n'a été téléchargé depuis Sketchfab, Poly Pizza, Kenney, Quaternius ou un autre dépôt.
 Aucun asset d'un jeu commercial n'est utilisé ni extrait. Le registre des ressources externes ci-dessous est donc vide.
 
 | Nom | Auteur | URL d'origine | Licence | Modifications | Emplacement | Attribution |
 |---|---|---|---|---|---|---|
 | *(aucune ressource externe)* | — | — | — | — | — | — |
+
+## Photos fournies par le propriétaire du projet
+
+Textures de pièces choisies dans **Studio → Pièces**. Le fond a été retiré automatiquement par l'outil
+`rembg` (modèles IS-Net et BiRefNet, exécutés localement), puis l'image a été recadrée en 512 × 512 px WebP.
+Sur le chaton noir et blanc, le jouet dinosaure a été retiré à la main, par sa couleur et sa position.
+
+| Fichier | Sujet | Origine | Droits |
+|---|---|---|---|
+| `public/assets/textures/coins/calopsitte-grise.webp` | Calopsitte grise | Photo fournie par le propriétaire du dépôt | **Non vérifiés** : photo vraisemblablement trouvée en ligne ; à remplacer si l'auteur n'a pas donné son accord |
+| `…/calopsitte-blanche.webp` | Calopsitte blanche | idem | **Non vérifiés** (idem) |
+| `…/calopsitte-perle.webp` | Calopsitte perle | idem | **Non vérifiés** (idem) |
+| `…/calopsitte-lutino.webp` | Calopsitte lutino | idem | **Non vérifiés** (idem) |
+| `…/calopsitte-cannelle.webp` | Calopsitte cannelle | idem | **Non vérifiés** (idem) |
+| `…/samoyede.webp` | Samoyède | Photo personnelle fournie par le propriétaire | Propriétaire du dépôt |
+| `…/chaton-tuxedo.webp` | Chaton noir et blanc | idem | Propriétaire du dépôt |
+| `…/chaton-calin.webp` | Chaton | idem | Propriétaire du dépôt |
+| `…/chihuahua.webp` | Chihuahua | idem | Propriétaire du dépôt |
 
 ## Ressources originales de ce dépôt
 

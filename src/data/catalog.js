@@ -71,6 +71,19 @@ export const VERSIONS = [
   },
 ];
 
+// Textures de pièces prêtes à choisir (photos fournies par le joueur, fond retiré).
+export const COIN_SKINS = [
+  { id: 'calopsitte-grise', name: 'Calopsitte grise' },
+  { id: 'calopsitte-blanche', name: 'Calopsitte blanche' },
+  { id: 'calopsitte-perle', name: 'Calopsitte perle' },
+  { id: 'calopsitte-lutino', name: 'Calopsitte lutino' },
+  { id: 'calopsitte-cannelle', name: 'Calopsitte cannelle' },
+  { id: 'samoyede', name: 'Samoyède' },
+  { id: 'chaton-tuxedo', name: 'Chaton noir et blanc' },
+  { id: 'chaton-calin', name: 'Chaton câlin' },
+  { id: 'chihuahua', name: 'Chihuahua' },
+].map((c) => ({ ...c, file: `assets/textures/coins/${c.id}.webp` }));
+
 export const MODES = [
   { id: 'standard', name: 'Standard', description: 'Rythme normal.', speedMult: 1, scoreMult: 1 },
   { id: 'speed', name: 'Speed Rush', description: 'Course 25 % plus rapide, score ×1,5.', speedMult: 1.25, scoreMult: 1.5 },

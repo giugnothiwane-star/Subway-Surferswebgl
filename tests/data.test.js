@@ -22,6 +22,11 @@ test('sauvegarde : valeurs invalides réparées, champs inconnus ignorés', () =
   assert.deepEqual(validateSave('corrompu'), defaultSave());
 });
 
+test('sauvegarde : texture de pièce choisie validée', () => {
+  assert.equal(validateSave({ studio: { coinPreset: 'samoyede' } }).studio.coinPreset, 'samoyede');
+  assert.equal(validateSave({ studio: { coinPreset: '../../etc' } }).studio.coinPreset, null);
+});
+
 test('sauvegarde : aller-retour JSON sans perte', () => {
   const s = defaultSave();
   s.bank = 1234;

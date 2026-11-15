@@ -161,7 +161,9 @@
           <button class="btn small ghost" data-clear="board">Retirer l'image</button>
         </div>
         <div class="tabpane" data-pane="coin">
-          <div class="colors"><label>Teinte <input type="color" id="st-coin" /></label></div>
+          <p class="field">Texture de la pièce (fond retiré, seul l'animal apparaît)</p>
+          <div id="st-coinskins" class="skins" role="radiogroup" aria-label="Textures de pièces"></div>
+          <div class="colors"><label>Teinte de l'or <input type="color" id="st-coin" /></label></div>
           <label class="field">Image de face (PNG / JPG / WebP) <input type="file" id="st-coinfile" accept="image/png,image/jpeg,image/webp" /></label>
           <button class="btn small ghost" data-clear="coin">Retirer l'image</button>
         </div>

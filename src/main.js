@@ -37,6 +37,15 @@ async function restoreCustomFiles(game, storage) {
       console.warn('[MNNROW] image personnalisée ignorée :', e.message);
     }
   }
+  if (storage.data.studio.coinPreset && !custom.coinTexture) {
+    const { COIN_SKINS } = await import('./data/catalog.js');
+    const skin = COIN_SKINS.find((c) => c.id === storage.data.studio.coinPreset);
+    try {
+      if (skin) custom.coinTexture = await game.assets.loadTexture(skin.file);
+    } catch (e) {
+      console.warn('[MNNROW] texture de pièce indisponible :', e.message);
+    }
+  }
   if (Object.keys(custom).length) game.applyCustom(custom);
   else game.applyCustom({});
   if (files.model) {

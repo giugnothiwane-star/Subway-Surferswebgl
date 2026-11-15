@@ -18,7 +18,7 @@ export function mat(name, params, Type = THREE.MeshStandardMaterial) {
 // ---- Pièce -----------------------------------------------------------------
 // Pièce épaisse : tranche crantée, rebord, symbole original en relief (éclair
 // stylisé dans un losange) sur les deux faces.
-export function coinGeometry() {
+export function coinGeometry({ symbol = true } = {}) {
   const pb = new PartBuilder();
   const gold = mat('Gold', { color: 0xffc23a, metalness: 1, roughness: 0.22, emissive: 0x3a2200, emissiveIntensity: 0.25 });
   const prof = [
@@ -38,7 +38,7 @@ export function coinGeometry() {
   const hole = new THREE.Path();
   hole.moveTo(0, 0.2); hole.lineTo(-0.2, 0); hole.lineTo(0, -0.2); hole.lineTo(0.2, 0); hole.closePath();
   ring.holes.push(hole);
-  for (const side of [1, -1]) {
+  for (const side of symbol ? [1, -1] : []) {
     const opts = { depth: 0.022, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 1 };
     pb.add(new THREE.ExtrudeGeometry(bolt, opts), gold, { position: [0, 0, side * 0.03], rotation: [0, side < 0 ? Math.PI : 0, 0] });
     pb.add(new THREE.ExtrudeGeometry(ring, { ...opts, depth: 0.012 }), gold, { position: [0, 0, side * 0.03], rotation: [0, side < 0 ? Math.PI : 0, 0] });

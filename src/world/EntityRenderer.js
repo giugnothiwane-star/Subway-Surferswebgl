@@ -82,9 +82,15 @@ export class EntityRenderer {
       this.coinFaces.material.dispose();
       this.coinFaces = null;
     }
+    // pièce sans symbole gravé quand une image recouvre la face
+    if (!this.coinGeos) this.coinGeos = { symbol: this.coins.geometry, plain: null };
     if (custom.coinTexture) {
-      const g = new THREE.CircleGeometry(0.27, 28);
-      const back = new THREE.CircleGeometry(0.27, 28);
+      if (!this.coinGeos.plain) this.coinGeos.plain = coinGeometry({ symbol: false }).geometry;
+      this.coins.geometry = this.coinGeos.plain;
+    } else this.coins.geometry = this.coinGeos.symbol;
+    if (custom.coinTexture) {
+      const g = new THREE.CircleGeometry(0.3, 32);
+      const back = new THREE.CircleGeometry(0.3, 32);
       back.rotateY(Math.PI);
       back.translate(0, 0, -0.062);
       g.translate(0, 0, 0.062);
@@ -99,7 +105,7 @@ export class EntityRenderer {
       merged.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
       merged.setIndex(idx);
       g.dispose(); back.dispose();
-      this.coinFaces = new THREE.InstancedMesh(merged, new THREE.MeshStandardMaterial({ map: custom.coinTexture, roughness: 0.4, metalness: 0.3 }), COIN_CAP);
+      this.coinFaces = new THREE.InstancedMesh(merged, new THREE.MeshStandardMaterial({ map: custom.coinTexture, roughness: 0.45, metalness: 0.15, alphaTest: 0.45, side: THREE.DoubleSide }), COIN_CAP);
       this.coinFaces.instanceMatrix = this.coins.instanceMatrix; // mêmes matrices que les pièces
       this.coinFaces.frustumCulled = false;
       this.group.add(this.coinFaces);

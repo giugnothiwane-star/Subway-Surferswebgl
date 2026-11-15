@@ -1,7 +1,7 @@
 // Schéma de sauvegarde + validation stricte (module pur, testé).
 // Une sauvegarde corrompue ou partielle est réparée champ par champ à partir
 // des valeurs par défaut, jamais acceptée telle quelle.
-import { BOARDS, CHARACTERS, MISSION_POOL, VERSIONS } from '../data/catalog.js';
+import { BOARDS, CHARACTERS, COIN_SKINS, MISSION_POOL, VERSIONS } from '../data/catalog.js';
 import { MAPS } from '../data/maps.js';
 
 export const SAVE_VERSION = 1;
@@ -25,6 +25,7 @@ export function defaultSave() {
     },
     studio: {
       coinTint: null,
+      coinPreset: null,
       trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' },
       lighting: { exposure: 1, sun: 1, hemi: 1 },
       files: { shirt: null, coin: null, board: null, train: null, model: null },
@@ -107,6 +108,7 @@ export function validateSave(input) {
   if (isObj(input.studio)) {
     const s = input.studio;
     out.studio.coinTint = color(s.coinTint, null);
+    out.studio.coinPreset = oneOf(s.coinPreset, COIN_SKINS.map((c) => c.id), null);
     if (isObj(s.trainLivery)) {
       out.studio.trainLivery = {
         enabled: bool(s.trainLivery.enabled, false),

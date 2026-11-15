@@ -35,6 +35,14 @@ export class AssetManager {
     }
   }
 
+  // Texture fournie avec le jeu (ex. textures de pièces).
+  async loadTexture(path) {
+    const t = await new THREE.TextureLoader().loadAsync(this.url(path));
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  }
+
   // Image (Blob/File) -> texture validée et redimensionnée (≤ 1024 px).
   async imageTexture(blob, { maxSide = 1024, repeat = false } = {}) {
     if (blob.size > LIMITS.imageBytes) throw new Error(`Image trop lourde (max ${LIMITS.imageBytes / 1048576} Mo).`);

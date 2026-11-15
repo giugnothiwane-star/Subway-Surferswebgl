@@ -2,7 +2,7 @@
 // personnages, hoverboards, missions), paramètres, studio et HUD.
 // Construction DOM sans innerHTML pour les données (pas d'injection HTML).
 import { MAPS, getMap } from '../data/maps.js';
-import { BOARDS, CHARACTERS, MODES, VERSIONS } from '../data/catalog.js';
+import { BOARDS, CHARACTERS, COIN_SKINS, MODES, VERSIONS } from '../data/catalog.js';
 import { missionDef } from '../gameplay/Missions.js';
 import { ensureMissions } from '../gameplay/Missions.js';
 import { HAIR_STYLES, ACCESSORIES } from '../models/Character.js';
@@ -362,6 +362,7 @@ export class UI {
     $('st-bc1').value = s.board.color || b.color;
     $('st-bc2').value = s.board.color2 || b.color2;
     $('st-coin').value = s.studio.coinTint || '#ffc23a';
+    this.renderCoinSkins();
     $('st-trainon').checked = s.studio.trainLivery.enabled;
     $('st-t1').value = s.studio.trainLivery.body;
     $('st-t2').value = s.studio.trainLivery.stripe;
@@ -416,7 +417,7 @@ export class UI {
     });
     imageInput('st-shirtfile', 'shirt', (t) => { this.game.applyCustom({ shirtTexture: t }); this.setSubject('character', true); });
     imageInput('st-boardfile', 'board', (t) => { this.game.applyCustom({ boardTexture: t }); this.setSubject('board', true); });
-    imageInput('st-coinfile', 'coin', (t) => { this.game.applyCustom({ coinTexture: t }); this.setSubject('coin', true); });
+    imageInput('st-coinfile', 'coin', (t) => { s().studio.coinPreset = null; this.game.applyCustom({ coinTexture: t }); this.renderCoinSkins(); this.setSubject('coin', true); });
     imageInput('st-trainfile', 'train', (t) => { s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; this.game.applyCustom({ trainTexture: t }); this.setSubject('train', true); });
     document.querySelectorAll('[data-clear]').forEach((b) => b.addEventListener('click', async () => {
       const slot = b.dataset.clear;
@@ -430,6 +431,7 @@ export class UI {
       } else {
         const key = { shirt: 'shirtTexture', board: 'boardTexture', coin: 'coinTexture', train: 'trainTexture' }[slot];
         this.game.custom[key] = null;
+        if (slot === 'coin') { s().studio.coinPreset = null; this.renderCoinSkins(); }
         this.game.applyCustom({});
       }
       this.storage.save();
@@ -461,7 +463,7 @@ export class UI {
       const d = this.save;
       d.look = {};
       d.board = { color: null, color2: null };
-      d.studio = { coinTint: null, trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' }, lighting: { exposure: 1, sun: 1, hemi: 1 }, files: { shirt: null, coin: null, board: null, train: null, model: null } };
+      d.studio = { coinTint: null, coinPreset: null, trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' }, lighting: { exposure: 1, sun: 1, hemi: 1 }, files: { shirt: null, coin: null, board: null, train: null, model: null } };
       try { await AssetDB.clear(); } catch { /* ignoré */ }
       this.game.custom = {};
       const rig = await this.game.assets.loadCharacter();
@@ -472,6 +474,49 @@ export class UI {
       this.syncStudio();
       msg('Personnalisations réinitialisées.');
     });
+  }
+
+  renderCoinSkins() {
+    const s = this.save;
+    const current = s.studio.coinPreset;
+    const item = (id, name, src) => h('button', {
+      class: `skin${current === id ? ' on' : ''}`,
+      role: 'radio',
+      'aria-checked': current === id ? 'true' : 'false',
+      title: name,
+      onclick: () => this.chooseCoinSkin(id),
+    }, h('span', { class: 'disc' }, src ? h('img', { src: this.base + src, alt: name, loading: 'lazy' }) : null), h('em', { text: name }));
+    $('st-coinskins').replaceChildren(
+      item(null, 'Symbole MNNROW', null),
+      ...COIN_SKINS.map((c) => item(c.id, c.name, c.file)),
+    );
+  }
+
+  async chooseCoinSkin(id) {
+    this.click();
+    const s = this.save;
+    const msg = (t, ok = true) => { $('st-msg').textContent = t; $('st-msg').style.color = ok ? 'var(--lime)' : 'var(--danger)'; };
+    try {
+      let tex = null;
+      if (id) {
+        const skin = COIN_SKINS.find((c) => c.id === id);
+        tex = await this.game.assets.loadTexture(skin.file);
+        msg(`✓ Texture « ${skin.name} » appliquée aux pièces.`);
+      } else msg('Symbole MNNROW d\'origine rétabli.');
+      // une texture choisie remplace l'image importée (et inversement)
+      s.studio.coinPreset = id;
+      if (s.studio.files.coin) {
+        s.studio.files.coin = null;
+        try { await AssetDB.delete('img:coin'); } catch { /* ignoré */ }
+      }
+      this.game.custom.coinTexture = null;
+      this.game.applyCustom({ coinTexture: tex });
+      this.storage.save();
+      this.renderCoinSkins();
+      this.setSubject('coin', true);
+    } catch (e) {
+      msg(`✗ Texture introuvable : ${e.message}`, false);
+    }
   }
 
   setSubject(subject, force = false) {
