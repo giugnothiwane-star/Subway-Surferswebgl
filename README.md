@@ -241,6 +241,17 @@ le jeu ; le code source reste public sur GitHub (le dépôt est public). Les pag
 moteurs de recherche. Pour une vraie protection par compte, il faudrait un dépôt privé avec une offre GitHub
 payante (Pages privées) ou un autre hébergeur avec authentification.
 
+### Modes de jeu (Paramètres → Mode de jeu, ou sélecteur du menu)
+
+- **Normal** : rythme classique.
+- **Entraînement** : vitesse lente et constante, 30 % d'obstacles en moins ; les chocs ne terminent pas
+  la partie (pas de record).
+- **Floor is Lava** : le sol est de la lave. Au sol, la jauge 🔥 se remplit en 1,1 s ; elle se vide en
+  l'air, sur un toit de train, en hoverboard ou en jetpack. Jauge pleine = brûlé. Score ×2.
+- **Speed Rush** et **Zen Run** : inchangés.
+- **Option Invincible** (case à cocher) : avec n'importe quel mode, aucun choc ni la lave ne termine la
+  partie (rebond sur les toits des trains, rebond hors de la lave). Pas de record ni de missions de record.
+
 ### Mode propriétaire : une image de pièce pour tout le monde
 
 1. **Paramètres → Propriétaire** : entre ton code propriétaire puis **Déverrouiller**

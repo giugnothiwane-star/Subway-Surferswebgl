@@ -123,6 +123,12 @@
         <label class="toggle"><input type="checkbox" id="s-reduced" /> Réduire les mouvements de caméra</label>
         <label class="toggle"><input type="checkbox" id="s-skinanim" /> Animations des skins (étoiles, flammes…)</label>
         <label class="toggle"><input type="checkbox" id="s-fps" /> Afficher les FPS</label>
+        <h3>Mode de jeu</h3>
+        <label class="field">Mode
+          <select id="s-mode"></select>
+        </label>
+        <p class="muted small" id="s-modedesc"></p>
+        <label class="toggle"><input type="checkbox" id="s-invincible" /> Invincible : impossible de perdre (fonctionne avec tous les modes, pas de record)</label>
         <h3>Commandes</h3>
         <label class="toggle"><input type="checkbox" id="s-touch" /> Boutons tactiles à l'écran</label>
         <label class="toggle"><input type="checkbox" id="s-vibrate" /> Vibrations (mobile)</label>
@@ -287,6 +293,7 @@
         </div>
       </div>
       <div id="h-powers" class="powers"></div>
+      <div id="h-lava" class="lavabar hidden" aria-label="Chaleur de la lave"><span>🔥 Lave</span><i><b id="h-lavafill"></b></i></div>
       <div id="h-fps" class="fps hidden"></div>
       <button id="h-board" class="boardbtn" data-act="board" aria-label="Activer un hoverboard"><i class="ico board"></i><b id="h-boardn">0</b></button>
       <div id="touchpad" class="touchpad">

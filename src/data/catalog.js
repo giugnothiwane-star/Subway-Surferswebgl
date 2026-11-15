@@ -85,7 +85,9 @@ export const COIN_SKINS = [
 ].map((c) => ({ ...c, file: `assets/textures/coins/${c.id}.webp` }));
 
 export const MODES = [
-  { id: 'standard', name: 'Standard', description: 'Rythme normal.', speedMult: 1, scoreMult: 1 },
+  { id: 'standard', name: 'Normal', description: 'Rythme normal.', speedMult: 1, scoreMult: 1 },
+  { id: 'training', name: 'Entraînement', description: 'Vitesse lente et constante, moins d\'obstacles ; les chocs ne terminent pas la partie (pas de record).', speedMult: 1, scoreMult: 0.5, zen: true, training: true },
+  { id: 'lava', name: 'Floor is Lava', description: 'Le sol est de la lave : reste sur les trains ou saute sans arrêt. Score ×2.', speedMult: 1, scoreMult: 2, lava: true },
   { id: 'speed', name: 'Speed Rush', description: 'Course 25 % plus rapide, score ×1,5.', speedMult: 1.25, scoreMult: 1.5 },
   { id: 'zen', name: 'Zen Run', description: 'Plus lent ; les chocs ne terminent pas la partie (pas de record).', speedMult: 0.82, scoreMult: 0.5, zen: true },
 ];

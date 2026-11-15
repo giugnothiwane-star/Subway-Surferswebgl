@@ -230,7 +230,7 @@ export class PlayerView {
       case 'roll': this.state = null; this.play('roll', 0.08); this.lock = 0.5; break;
       case 'jump': case 'superJump': this.lock = 0; this.play('jump', 0.08); break;
       case 'land': if (!ev.height || ev.hard) { this.landTimer = 0.22; } break;
-      case 'stumble': this.state = null; this.play('hit', 0.06); this.lock = 0.45; break;
+      case 'stumble': this.state = null; this.play('hit', 0.06); this.lock = 0.45; this.stumbleT = 0; this.stumbleFrom = this.group.position.x; break;
       case 'vault': this.vaultT = 0; this.vaultFrom = this.group.position.y; this.lock = 0; this.play('jump', 0.06); break;
       case 'crash': this.play('death', 0.1); this.lock = 99; break;
       case 'hoverBreak': this.boardFade = 1; break;
@@ -266,6 +266,12 @@ export class PlayerView {
     this.prevX = sim.x;
     const hover = sim.powerups.active('hoverboard');
     this.group.position.set(sim.x, sim.y, -sim.s);
+    // trébuchement : le recul latéral est montré en douceur (plus de « téléportation »)
+    if (this.stumbleT !== undefined && this.stumbleT < 0.18) {
+      this.stumbleT += dt;
+      const k = Math.min(1, this.stumbleT / 0.18);
+      this.group.position.x = this.stumbleFrom + (sim.x - this.stumbleFrom) * (k * (2 - k));
+    }
     // rebond sur un toit après un choc absorbé : montée lissée sur 0,22 s
     if (this.vaultT !== undefined && this.vaultT < 0.22) {
       this.vaultT += dt;
@@ -378,6 +384,7 @@ export class PlayerView {
     this.boardFade = 0;
     this.shieldFade = 0;
     this.vaultT = undefined;
+    this.stumbleT = undefined;
     this.body.position.y = 0;
     this.body.visible = true;
   }

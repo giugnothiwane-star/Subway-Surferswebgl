@@ -6,7 +6,7 @@ import { RNG, hashSeed } from '../gameplay/rng.js';
 import { LANE_WIDTH } from '../gameplay/constants.js';
 import * as P from '../models/Props.js';
 import { PartBuilder, RoundedBoxGeometry } from '../models/geo.js';
-import { groundTexture, makeTexture, normalTexture, roofTexture, windowEmissiveTexture, windowTexture } from '../models/textures.js';
+import { groundTexture, lavaTexture, makeTexture, normalTexture, roofTexture, windowEmissiveTexture, windowTexture } from '../models/textures.js';
 import { AmbientParticles } from './Particles.js';
 
 const CHUNK = 40;
@@ -32,6 +32,9 @@ function worldUV(material, tile) {
       #endif
       #ifdef USE_NORMALMAP
         vNormalMapUv = wUv.xz / ${tile.toFixed(2)};
+      #endif
+      #ifdef USE_EMISSIVEMAP
+        vEmissiveMapUv = wUv.xz / ${tile.toFixed(2)};
       #endif`);
   };
   material.customProgramCacheKey = () => `worldUV${tile}`;
@@ -277,6 +280,7 @@ export class Environment {
     const m = this.map;
     const bedMap = groundTexture(m.bed.type, m.bed.color);
     const bedMat = this.track(worldUV(new THREE.MeshStandardMaterial({ map: bedMap, roughness: 0.95, ...this.relief(bedMap, 3, 1.1) }), 3));
+    this.bedMat = bedMat;
     this.bed = new THREE.Mesh(this.track(new THREE.BoxGeometry(8.6, 0.3, 700)), bedMat);
     this.bed.position.y = -0.29;
     this.bed.receiveShadow = true;
@@ -323,6 +327,7 @@ export class Environment {
       roughness: m.groundGloss ? 0.35 : 0.95,
       metalness: m.groundGloss ? 0.3 : 0,
     }), 6));
+    this.groundMat = gMat;
     const geo = this.track(new THREE.PlaneGeometry(1, 1));
     geo.rotateX(-Math.PI / 2);
     this.groundPool = new THREE.InstancedMesh(geo, gMat, this.slots);
@@ -668,11 +673,41 @@ export class Environment {
     this.tunnelK = k0 + (inT - k0) * Math.min(1, dt * 3);
     if (Math.abs(this.tunnelK - k0) > 0.001 || (inT && k0 < 0.999)) this.applyTunnelLight();
     if (this.ambient) this.ambient.update(dt, camera.position, speed);
+    if (this.lavaOn) {
+      const k = 1 + Math.sin(this.time * 3.1) * 0.25 + Math.sin(this.time * 7.3) * 0.08;
+      this.bedMat.emissiveIntensity = k;
+      if (this.groundMat) this.groundMat.emissiveIntensity = k * 0.9;
+    }
     if (this.neonMats && this.map.ambience.neonFlicker) {
       for (const n of this.neonMats) {
         const f = Math.sin(this.time * 7 + n.seed) > 0.97 || Math.sin(this.time * 13.3 + n.seed * 3) > 0.985 ? 0.25 : 1;
         n.m.emissiveIntensity = n.base * f * (0.9 + 0.1 * Math.sin(this.time * 3 + n.seed));
       }
+    }
+  }
+
+  // Floor is Lava : le ballast et le sol rougeoient (émission pulsée).
+  setLava(on) {
+    on = !!on;
+    if (this.lavaOn === on) return;
+    this.lavaOn = on;
+    for (const m of [this.bedMat, this.groundMat]) {
+      if (!m) continue;
+      if (on) {
+        m.userData.lavaBackup = { color: m.color.getHex(), roughness: m.roughness };
+        m.color.set(0x2a1410); // roche sombre : la texture d'origine devient basalte
+        m.emissive.set(0xffffff);
+        m.emissiveMap = lavaTexture();
+        m.emissiveIntensity = 1;
+        m.roughness = 0.6;
+      } else if (m.userData.lavaBackup) {
+        m.color.set(m.userData.lavaBackup.color);
+        m.roughness = m.userData.lavaBackup.roughness;
+        m.emissive.set(0x000000);
+        m.emissiveMap = null;
+        m.emissiveIntensity = 0;
+      }
+      m.needsUpdate = true;
     }
   }
 

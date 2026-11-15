@@ -123,3 +123,11 @@ test('Mes images : liste locale validée, sélection locale seulement si elle ex
   assert.equal(v.studio.coinPreset, 'local:abc1');
   assert.equal(validateSave({ studio: { coinLib: [], coinPreset: 'local:zzz' } }).studio.coinPreset, null);
 });
+
+test('modes Entraînement / Floor is Lava et option Invincible validés', () => {
+  assert.equal(validateSave({ selected: { mode: 'lava' } }).selected.mode, 'lava');
+  assert.equal(validateSave({ selected: { mode: 'training' } }).selected.mode, 'training');
+  assert.equal(validateSave({ selected: { mode: 'triche' } }).selected.mode, 'standard');
+  assert.equal(validateSave({ settings: { invincible: true } }).settings.invincible, true);
+  assert.equal(validateSave({ settings: { invincible: 'oui' } }).settings.invincible, false);
+});
