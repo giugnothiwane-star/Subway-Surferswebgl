@@ -39,6 +39,7 @@ Tests mentionnés : `npm test` (tests Node) et `node tools/e2e.mjs` (navigateur 
 | B29 | Moyenne | Bonus ramassé grossi devant la caméra : l'aimant masquait le joueur | Captures avant | Confirmée | `src/world/EntityRenderer.js` | Le bonus rétrécit et est aspiré vers le joueur | Captures | Corrigé |
 | B30 | Basse | Pièces brun foncé sur la carte néon avec les reflets du ciel nocturne | Captures (remaster) | Confirmée | `src/models/Props.js`, `src/skins/CoinFactory.js` | Reflets neutres dédiés aux objets à ramasser ; ciel de nuit neutralisé dans la carte de reflets | Captures | Corrigé |
 | B31 | Basse | Captures automatiques faussées : la transition menu → course était encore en cours après une avance rapide | Captures avant | Confirmée (outil de test) | `tools/compare-shots.mjs` | Transition coupée avant la capture | Captures | Corrigé |
+| B32 | Haute | Déploiement bloqué : 4 tests navigateur en échec sur la machine de GitHub (import d'image > 10 s, puis studio resté ouvert pour les tests suivants ; FOV mesuré en pleine transition) | CI de la fusion #6 | Confirmée (journal Actions) | `tools/e2e.mjs` | Délais de 30 s, retour au menu garanti, galerie vidée au début du test, FOV cible mesuré | e2e local + CI | Corrigé |
 
 ## Nouvelles fonctions vérifiées
 
