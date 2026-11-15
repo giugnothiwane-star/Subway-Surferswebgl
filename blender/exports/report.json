@@ -1,0 +1,163 @@
+{
+  "blender_version": "5.0.1",
+  "seconds": 0.7,
+  "assets": [
+    {
+      "file": "train_urban.glb",
+      "tris": 4252,
+      "materials": 13,
+      "bytes": 180384
+    },
+    {
+      "file": "train_modern.glb",
+      "tris": 3424,
+      "materials": 11,
+      "bytes": 119012
+    },
+    {
+      "file": "train_freight_loco.glb",
+      "tris": 4720,
+      "materials": 12,
+      "bytes": 190356
+    },
+    {
+      "file": "wagon_container.glb",
+      "tris": 4168,
+      "materials": 7,
+      "bytes": 171888
+    },
+    {
+      "file": "wagon_tank.glb",
+      "tris": 3812,
+      "materials": 7,
+      "bytes": 134104
+    },
+    {
+      "file": "coin.glb",
+      "tris": 1204,
+      "materials": 2,
+      "bytes": 38152
+    },
+    {
+      "file": "magnet.glb",
+      "tris": 636,
+      "materials": 3,
+      "bytes": 19032
+    },
+    {
+      "file": "hoverboard_classic.glb",
+      "tris": 1212,
+      "materials": 6,
+      "bytes": 36996
+    },
+    {
+      "file": "hoverboard_neon.glb",
+      "tris": 1412,
+      "materials": 5,
+      "bytes": 43496
+    },
+    {
+      "file": "hoverboard_futuristic.glb",
+      "tris": 1324,
+      "materials": 4,
+      "bytes": 40360
+    },
+    {
+      "file": "hoverboard_urban.glb",
+      "tris": 1464,
+      "materials": 8,
+      "bytes": 46044
+    },
+    {
+      "file": "hoverboard_energy.glb",
+      "tris": 1452,
+      "materials": 5,
+      "bytes": 42692
+    },
+    {
+      "file": "barrier_low.glb",
+      "tris": 292,
+      "materials": 5,
+      "bytes": 18084
+    },
+    {
+      "file": "barrier_high.glb",
+      "tris": 404,
+      "materials": 5,
+      "bytes": 22148
+    },
+    {
+      "file": "ramp.glb",
+      "tris": 472,
+      "materials": 4,
+      "bytes": 28044
+    },
+    {
+      "file": "building_a.glb",
+      "tris": 1136,
+      "materials": 10,
+      "bytes": 60912
+    },
+    {
+      "file": "building_b.glb",
+      "tris": 3992,
+      "materials": 10,
+      "bytes": 196500
+    },
+    {
+      "file": "building_c.glb",
+      "tris": 4124,
+      "materials": 8,
+      "bytes": 196168
+    },
+    {
+      "file": "lamp.glb",
+      "tris": 336,
+      "materials": 3,
+      "bytes": 13644
+    },
+    {
+      "file": "rail_segment.glb",
+      "tris": 340,
+      "materials": 4,
+      "bytes": 20984
+    },
+    {
+      "file": "palm.glb",
+      "tris": 1084,
+      "materials": 4,
+      "bytes": 31048
+    },
+    {
+      "file": "fir.glb",
+      "tris": 172,
+      "materials": 2,
+      "bytes": 7848
+    },
+    {
+      "file": "fir_snow.glb",
+      "tris": 440,
+      "materials": 3,
+      "bytes": 15960
+    },
+    {
+      "file": "cactus.glb",
+      "tris": 948,
+      "materials": 2,
+      "bytes": 23608
+    },
+    {
+      "file": "rock.glb",
+      "tris": 400,
+      "materials": 1,
+      "bytes": 25628
+    },
+    {
+      "file": "station.glb",
+      "tris": 786,
+      "materials": 8,
+      "bytes": 40712
+    }
+  ],
+  "failed": []
+}

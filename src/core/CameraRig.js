@@ -1,0 +1,120 @@
+// Caméra à la troisième personne : suivi lissé, ajustements saut / roulade,
+// champ de vision dynamique, secousses atténuées, évitement des trains et des
+// plafonds de tunnel, option « mouvements réduits ».
+import * as THREE from 'three';
+import { TRAIN } from '../gameplay/constants.js';
+import { entityBox } from '../gameplay/obstacles.js';
+
+const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
+
+export class CameraRig {
+  constructor() {
+    this.camera = new THREE.PerspectiveCamera(62, 1, 0.1, 600);
+    this.pos = new THREE.Vector3(0, 3.4, 6);
+    this.look = new THREE.Vector3(0, 1.2, -8);
+    this.groundY = 0;
+    this.shake = 0;
+    this.reduced = false;
+    this.aspect = 1;
+    this.mode = 'game';
+    this.orbit = 0;
+    this._box = {};
+  }
+
+  setAspect(aspect) {
+    this.aspect = aspect;
+    this.camera.aspect = aspect;
+    this.camera.updateProjectionMatrix();
+  }
+
+  addShake(amount) {
+    if (!this.reduced) this.shake = Math.min(1, this.shake + amount);
+  }
+
+  // Paramètres adaptés à l'écran : en portrait, on recule et on monte pour
+  // garder les trois voies lisibles.
+  framing() {
+    const portrait = this.aspect < 0.8;
+    return {
+      dist: portrait ? 6.6 : 5.8,
+      height: portrait ? 4.6 : 3.8,
+      baseFov: portrait ? 68 : 58,
+      lookAhead: portrait ? 15 : 14,
+    };
+  }
+
+  updateGame(dt, sim, zones) {
+    this.viewShift(0);
+    const f = this.framing();
+    const s = sim.s;
+    // Sol « lissé » : la caméra suit les toits des trains sans suivre chaque saut.
+    const supportY = sim.onGround ? sim.y : Math.min(sim.y, this.groundY + 1.2);
+    this.groundY = damp(this.groundY, supportY, sim.onGround ? 6 : 2.5, dt);
+    const jumpLift = Math.max(0, sim.y - this.groundY) * 0.35;
+    const rollDrop = sim.rollTime > 0 ? -0.35 : 0;
+    const jet = sim.jet === 'rise' || sim.jet === 'fly';
+    let ty = this.groundY + f.height + jumpLift + rollDrop + (jet ? 1.0 : 0);
+    const tx = sim.x * 0.78;
+    const tz = -(s - f.dist);
+    // Évitement : ne pas entrer dans un train proche de la caméra
+    const camS = s - f.dist;
+    for (const e of sim.entities) {
+      if (e.kind !== 'train') continue;
+      const b = entityBox(e, s, this._box);
+      if (camS < b.s0 - 1 || camS > b.s1 + 1) continue;
+      if (Math.abs(tx - (b.x0 + b.x1) / 2) < TRAIN.width / 2 + 0.4) ty = Math.max(ty, TRAIN.height + 1.4);
+    }
+    // Plafond de tunnel
+    for (const z of zones) {
+      if (z.type === 'tunnel' && camS > z.s0 - 2 && camS < z.s1 + 2) ty = Math.min(ty, 6.9);
+    }
+    const kx = this.reduced ? 5 : 8;
+    this.pos.x = damp(this.pos.x, tx, kx, dt);
+    this.pos.y = damp(this.pos.y, ty, this.reduced ? 4 : 6, dt);
+    this.pos.z = tz; // suivi exact en profondeur (aucun décalage brusque)
+    const lookY = this.groundY + 0.6 + jumpLift * 0.6 + (jet ? 0.8 : 0);
+    this.look.set(damp(this.look.x, sim.x * 0.55, 7, dt), damp(this.look.y, lookY, 6, dt), -(s + f.lookAhead));
+    // FOV dynamique selon la vitesse (désactivé en mouvements réduits)
+    const speedK = Math.max(0, Math.min(1, (sim.v - 14) / 16));
+    const fov = f.baseFov + (this.reduced ? 0 : speedK * 7 + (jet ? 4 : 0));
+    this.camera.fov = damp(this.camera.fov, fov, 2, dt);
+    this.apply(dt);
+  }
+
+  // Vue du menu : orbite lente autour du personnage.
+  // Décale l'image verticalement (menu portrait : le personnage au-dessus des boutons).
+  viewShift(k, kx = 0) {
+    const c = this.camera;
+    const key = `${k}:${kx}`;
+    if (this._shift === key) return;
+    this._shift = key;
+    if (!k && !kx) c.clearViewOffset();
+    else c.setViewOffset(1000, 1000, 1000 * kx, 1000 * k, 1000, 1000);
+  }
+
+  updateMenu(dt, target) {
+    this.viewShift(this.aspect < 0.8 ? 0.2 : 0, this.aspect >= 0.8 ? 0.12 : 0);
+    this.orbit += dt * (this.reduced ? 0.05 : 0.12);
+    const portrait = this.aspect < 0.8;
+    const r = portrait ? 8.2 : 6.2;
+    const a = Math.sin(this.orbit) * 0.55;
+    this.pos.set(target.x + Math.sin(a) * r, target.y + 1.5, target.z + Math.cos(a) * r);
+    this.look.set(target.x, target.y + 0.95, target.z);
+    this.camera.fov = damp(this.camera.fov, portrait ? 38 : 34, 3, dt);
+    this.apply(dt);
+  }
+
+  apply(dt) {
+    const c = this.camera;
+    c.position.copy(this.pos);
+    if (this.shake > 0) {
+      const t = performance.now() * 0.05;
+      const a = this.shake * this.shake * 0.25;
+      c.position.x += Math.sin(t * 1.7) * a;
+      c.position.y += Math.cos(t * 2.3) * a;
+      this.shake = Math.max(0, this.shake - dt * 2.4);
+    }
+    c.lookAt(this.look);
+    c.updateProjectionMatrix();
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "mnnrow",
+  "version": "2.0.0",
+  "private": true,
+  "description": "MNNROW Ultimate 3D — jeu de course infinie 3D original (Three.js / WebGL)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host --port 4173",
+    "test": "node --test tests/*.test.js",
+    "export:models": "node tools/export-models.mjs",
+    "shots": "node tools/screenshots.mjs",
+    "e2e": "node tools/e2e.mjs"
+  },
+  "dependencies": {
+    "fflate": "0.8.2",
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "vite": "5.4.11"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
