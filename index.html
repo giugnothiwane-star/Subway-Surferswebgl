@@ -250,9 +250,9 @@
         <div class="hud-left">
           <div class="score"><b id="h-score">0</b><span id="h-mult" class="mult">×1</span></div>
           <div class="dist"><span id="h-dist">0</span> m</div>
-          <div class="timers">
-            <span class="timer" title="Durée de la course : s'arrête quand tu tombes"><i>⏱</i><b id="h-time">0:00.0</b></span>
-            <span class="timer coin" id="h-coinbox" title="Temps depuis la dernière pièce : s'arrête quand tu en prends une"><i class="ico coin"></i><b id="h-cointime">0.0 s</b></span>
+          <div class="chrono" id="h-chrono" role="timer" title="Chrono de la course : s'arrête quand tu tombes">
+            <span class="chrono-dot" aria-hidden="true"></span>
+            <span class="chrono-digits"><b id="h-time">00:00</b><small id="h-time-cs">.00</small></span>
           </div>
         </div>
         <div class="hud-right">
@@ -291,13 +291,15 @@
         <div class="eyebrow" id="go-cause">FIN DE PARTIE</div>
         <h2 id="go-title">Belle course !</h2>
         <div id="go-record" class="record hidden">NOUVEAU RECORD</div>
+        <div class="chrono big dead" id="go-chrono" title="Durée de la course">
+          <span class="chrono-dot" aria-hidden="true"></span>
+          <span class="chrono-digits"><b id="go-time">00:00</b><small id="go-time-cs">.00</small></span>
+        </div>
         <div class="resgrid">
           <div><small>Score</small><b id="go-score">0</b></div>
           <div><small>Distance</small><b id="go-dist">0 m</b></div>
           <div><small>Pièces</small><b id="go-coins">0</b></div>
           <div><small>Meilleur score</small><b id="go-best">0</b></div>
-          <div><small>Durée de la course</small><b id="go-time">0:00.0</b></div>
-          <div><small>Plus long sans pièce</small><b id="go-nocoin">0.0 s</b></div>
         </div>
         <div id="go-missions" class="small"></div>
         <p class="muted small">Graine : <code id="go-seed">—</code></p>

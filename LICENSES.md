@@ -35,7 +35,7 @@ Sur le chaton noir et blanc, le jouet dinosaure a été retiré à la main, par 
 | Personnage, trains, pièces, bonus, hoverboards, obstacles, décors | Construits en JavaScript à partir de primitives Three.js, de profils balayés, d'extrusions et de géométries fusionnées | `src/models/` |
 | Fichiers GLB du jeu | Exportés depuis ces modèles par `GLTFExporter` (`npm run export:models`) | `public/assets/models/` |
 | Fichiers GLB Blender | Générés par les scripts `bpy` du dossier `blender/`, exécutés avec le module pip `bpy` (Blender 5.0.1) | `blender/exports/` |
-| Textures (livrées de trains, fenêtres, sols, affiches, enseignes, hoverboards, eau) | Dessinées à l'exécution sur `<canvas>` | `src/models/textures.js` |
+| Textures (livrées de trains, façades et fenêtres, sols, ballast, bois des traverses, toits, cartes de relief, affiches, enseignes, hoverboards, eau) | Dessinées à l'exécution sur `<canvas>` | `src/models/textures.js` |
 | Affiches et enseignes | Noms de marques **fictifs** (ZAP COLA, PIXEL NOODLES, ROBO RAMEN…) | `src/models/textures.js`, `src/data/maps.js` |
 | Musique, ambiances et effets sonores | Synthétisés en temps réel avec la Web Audio API (aucun fichier audio) | `src/audio/AudioSystem.js` |
 | Vignettes des cartes | Captures d'écran du jeu lui-même (Playwright) | `public/assets/maps/` |
@@ -49,6 +49,7 @@ Elles ne remplacent pas le travail d'un artiste 3D professionnel.
 | Paquet | Version | Licence | Usage |
 |---|---|---|---|
 | three | 0.170.0 | MIT | Rendu 3D, GLTFLoader, GLTFExporter, OrbitControls, RoomEnvironment, BufferGeometryUtils |
+| @fontsource/orbitron | 5.2.8 | SIL Open Font License 1.1 | Police « Orbitron » du chrono (fichiers woff2/woff inclus dans le build) |
 | fflate | 0.8.2 | MIT | Décompression des archives ZIP importées dans le studio (chargé à la demande) |
 | vite | 5.4.11 | MIT | Outil de compilation (développement uniquement) |
 

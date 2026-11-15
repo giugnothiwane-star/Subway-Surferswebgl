@@ -3,7 +3,7 @@
 // { geometry, materials } fusionné pour l'instanciation (InstancedMesh).
 import * as THREE from 'three';
 import { PartBuilder, RoundedBoxGeometry, jitterGeometry, tube } from './geo.js';
-import { neonSignTexture, posterTexture, stripeTexture } from './textures.js';
+import { neonSignTexture, posterTexture, stripeTexture, woodTexture } from './textures.js';
 import { BARRIER, RAMP, TRAIN } from '../gameplay/constants.js';
 
 const mats = {};
@@ -437,7 +437,8 @@ export function fenceGeo(color = 0x7d8794) {
 
 export function sleeperGeo(color = 0x6d5646) {
   const g = new RoundedBoxGeometry(2.3, 0.14, 0.3, 1, 0.03);
-  const m = mat(`Sleeper_${color}`, { color, roughness: 0.9 });
+  // bois teinté : la couleur de la carte multiplie les fibres grises de la texture
+  const m = mat(`Sleeper_${color}`, { color: new THREE.Color(color).multiplyScalar(1.25), map: woodTexture(), roughness: 0.88 });
   return { geometry: g, materials: [m] };
 }
 

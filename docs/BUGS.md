@@ -30,6 +30,8 @@ Tests mentionnés : `npm test` (tests Node) et `node tools/e2e.mjs` (navigateur 
 | B20 | Basse | Sol au-dessus du ballast | Capture | Confirmée | `src/world/Environment.js` | Sol abaissé | Capture | Corrigé |
 | B21 | Basse | Listes internes du générateur qui grossissaient pendant la course | Course de 10 km (mesure Node) | Confirmée | `src/gameplay/TrackGenerator.js` | Vidées à chaque nettoyage | Node | Corrigé |
 | B22 | Moyenne | Couleurs du personnage modifiées sur le mauvais matériau quand un skin est actif | Changer une couleur avec la Galaxie active | Lecture du code (nouveau système de skins) | `src/models/Character.js` | `applyLook` agit sur le matériau d'origine | e2e Galaxie | Corrigé |
+| B23 | Basse | Texture de l'eau différente à chaque chargement (`Math.random`) | Lecture du code | Confirmée | `src/world/Environment.js` | Tirages déterministes | Capture | Corrigé |
+| B24 | Basse | HUD : deux chronos en pastilles peu lisibles (demande joueur) | Retour joueur | Confirmée | `index.html`, `src/ui/UI.js`, `src/styles/main.css` | Un seul chrono MM:SS.cc, police Orbitron, case arrondie, rouge et figé à la chute ; chrono « sans pièce » retiré | e2e Chrono | Corrigé |
 
 ## Nouvelles fonctions vérifiées
 
@@ -41,6 +43,8 @@ Tests mentionnés : `npm test` (tests Node) et `node tools/e2e.mjs` (navigateur 
 | Images sur les pièces | Contenir, couvrir, zoom, rotation et décalage sur une image rectangulaire transparente ; dos lisible, non inversé (`dev/test-skins.html`) |
 | Cape pendant les sauts et roulades | 14 échantillons : aucune valeur NaN, déplacement ≤ 0,92 m, toujours attachée au torse et visible |
 | Qualité LOW du shader Galaxie | Compile et reste reconnaissable (capture) |
+| Nouvelles textures (façades brique/pierre/panneaux/rondins/crépi, fenêtres encadrées, ballast en pierres, asphalte fissuré, sable ridé, neige, herbe, traverses en bois, toits) | Captures des 6 cartes en portrait et paysage, aucune erreur console ; relief (cartes de normales) désactivé en LOW |
+| Chrono | Police Orbitron chargée, bord arrondi 16 px, figé à la chute et identique sur l'écran de fin (e2e) |
 
 ## Bugs et limites encore connus
 

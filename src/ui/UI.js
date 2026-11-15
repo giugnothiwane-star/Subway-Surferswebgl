@@ -27,10 +27,14 @@ function h(tag, props = {}, ...children) {
   return el;
 }
 const fmt = (n) => Math.floor(n).toLocaleString('fr-FR');
-const fmtTime = (t) => {
-  const m = Math.floor(t / 60);
-  const s = t - m * 60;
-  return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`;
+// Chrono : « MM:SS » + « .cc » (centièmes affichés plus petits). Au-delà d'une
+// heure les minutes continuent (60:00, 61:00…) pour garder une largeur stable.
+export const chronoParts = (t) => {
+  const cs = Math.max(0, Math.floor((Number(t) || 0) * 100 + 1e-6));
+  const m = Math.floor(cs / 6000);
+  const sec = Math.floor(cs / 100) % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  return { main: `${pad(m)}:${pad(sec)}`, cs: `.${pad(cs % 100)}` };
 };
 // Limite la fréquence d'un traitement coûteux (glisser un sélecteur de couleur
 // déclenche des centaines d'événements) ; la dernière valeur est toujours appliquée.
@@ -878,13 +882,16 @@ export class UI {
 
   updateHUD(sim, save) {
     // chrono de course : s'arrête à la chute (le temps de simulation ne progresse plus)
-    this.setText('h-time', fmtTime(sim.time));
-    if (this.hudCache.dead !== !sim.alive) { this.hudCache.dead = !sim.alive; $('h-time').parentElement.classList.toggle('dead', !sim.alive); }
-    // chrono « pièce » : compte depuis la dernière pièce et se fige un instant quand tu en prends une
-    const frozen = sim.lastCoinAt > 0 && sim.time - sim.lastCoinAt < 0.7;
-    const coinT = frozen ? sim.lastCoinGap : sim.time - sim.lastCoinAt;
-    this.setText('h-cointime', `${coinT.toFixed(1)} s`);
-    if (this.hudCache.frozen !== frozen) { this.hudCache.frozen = frozen; $('h-coinbox').classList.toggle('stopped', frozen); }
+    const ct = chronoParts(sim.time);
+    this.setText('h-time', ct.main);
+    this.setText('h-time-cs', ct.cs);
+    if (this.hudCache.dead !== !sim.alive) {
+      this.hudCache.dead = !sim.alive;
+      const box = $('h-chrono');
+      box.classList.toggle('dead', !sim.alive);
+      box.classList.remove('flash');
+      if (!sim.alive) { void box.offsetWidth; box.classList.add('flash'); }
+    }
     this.setText('h-score', fmt(sim.score));
     this.setText('h-dist', fmt(sim.s));
     this.setText('h-coins', fmt(sim.coins));
@@ -931,8 +938,9 @@ export class UI {
     $('go-dist').textContent = `${fmt(r.distance)} m`;
     $('go-coins').textContent = fmt(r.coins);
     $('go-best').textContent = fmt(r.best);
-    $('go-time').textContent = fmtTime(r.time);
-    $('go-nocoin').textContent = `${(r.longestNoCoin || 0).toFixed(1)} s`;
+    const ct = chronoParts(r.time);
+    $('go-time').textContent = ct.main;
+    $('go-time-cs').textContent = ct.cs;
     $('go-seed').textContent = r.seed;
     const lines = [];
     for (const d of r.finished) lines.push(h('div', { text: `★ Mission réussie : ${d.label} (+${d.reward})` }));

@@ -210,14 +210,28 @@ input[type=color] { width: 100%; height: 36px; border: 1px solid var(--line); bo
 .mult.boost { background: #b07aff; color: #fff; animation: pulse .6s infinite alternate; }
 @keyframes pulse { to { transform: scale(1.12); } }
 .dist { font-weight: 800; color: #e7ebf0; text-shadow: 0 1px 4px rgba(0,0,0,.7); font-variant-numeric: tabular-nums; }
-.timers { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-.timer { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 99px; background: rgba(13,15,20,.55); border: 1px solid var(--line); font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.timer i { font-style: normal; font-size: 12px; }
-.timer .ico.coin { width: 13px; height: 13px; vertical-align: 0; }
-.timer b { min-width: 46px; }
-.timer.stopped { background: var(--gold); color: #2a1500; border-color: var(--gold); }
-.timer.stopped .ico.coin { box-shadow: inset 0 0 0 2px rgba(0,0,0,.25); }
-.timer.dead { background: var(--danger); color: #fff; border-color: var(--danger); }
+/* Chrono : vraie case de chronomètre, police Orbitron, bord dégradé arrondi */
+.chrono { --c1: #7ef9ff; --c2: #b8f477; --c3: #ff5af0; position: relative; display: inline-flex; align-items: center; gap: 9px; margin-top: 8px; padding: 7px 14px 7px 11px; border-radius: 16px; isolation: isolate;
+  background: linear-gradient(160deg, rgba(20,26,40,.92), rgba(6,8,14,.92)) padding-box, linear-gradient(120deg, var(--c1), var(--c2) 45%, var(--c3)) border-box;
+  border: 2px solid transparent; box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.45), 0 0 18px rgba(126,249,255,.28), inset 0 1px 0 rgba(255,255,255,.12); }
+.chrono::after { content: ''; position: absolute; inset: 3px; border-radius: 12px; pointer-events: none; z-index: -1; background: linear-gradient(180deg, rgba(255,255,255,.09), transparent 48%); }
+.chrono-digits { display: inline-flex; align-items: baseline; font-family: 'Orbitron', ui-monospace, monospace; font-variant-numeric: tabular-nums; line-height: 1; }
+.chrono-digits b { font-weight: 900; font-size: clamp(20px, 5.6vw, 27px); letter-spacing: .06em; color: #fff;
+  background: linear-gradient(180deg, #ffffff 10%, #c9fbff 55%, #7ef9ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 6px rgba(126,249,255,.55)) drop-shadow(0 2px 0 rgba(0,0,0,.6)); }
+.chrono-digits small { font-weight: 700; font-size: clamp(13px, 3.6vw, 17px); margin-left: 2px; color: var(--c2); letter-spacing: .04em; text-shadow: 0 0 8px rgba(184,244,119,.6); }
+.chrono-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; background: radial-gradient(circle at 35% 35%, #fff, var(--c2) 55%, #4f8f1a); box-shadow: 0 0 8px var(--c2); animation: chronoBlink 1s steps(2, start) infinite; }
+@keyframes chronoBlink { to { opacity: .25; } }
+.chrono.dead { --c1: #ff9a6b; --c2: #ff5a5f; --c3: #ff2e7e; box-shadow: 0 0 0 1px rgba(0,0,0,.5), 0 6px 18px rgba(0,0,0,.45), 0 0 20px rgba(255,90,95,.45), inset 0 1px 0 rgba(255,255,255,.12); }
+.chrono.dead .chrono-digits b { background: linear-gradient(180deg, #fff 10%, #ffd0c8 55%, #ff8a7a); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 6px rgba(255,90,95,.6)) drop-shadow(0 2px 0 rgba(0,0,0,.6)); }
+.chrono.dead .chrono-dot { animation: none; }
+.chrono.dead.flash { animation: chronoStop .45s ease-out; }
+@keyframes chronoStop { 0% { transform: scale(1.14); } 100% { transform: scale(1); } }
+.chrono.big { display: flex; width: max-content; margin: 6px auto 12px; padding: 10px 20px 10px 15px; border-radius: 20px; }
+.chrono.big .chrono-digits b { font-size: clamp(30px, 9vw, 42px); }
+.chrono.big .chrono-digits small { font-size: clamp(18px, 5vw, 24px); }
+.chrono.big .chrono-dot { width: 13px; height: 13px; }
+@media (prefers-reduced-motion: reduce) { .chrono-dot, .chrono.dead.flash { animation: none; } }
 .hud-right { display: flex; gap: 8px; align-items: center; }
 .coins { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); font-weight: 1000; font-size: 18px; font-variant-numeric: tabular-nums; }
 .powers { display: grid; gap: 6px; margin-top: 10px; width: min(190px, 46vw); }
