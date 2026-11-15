@@ -28,6 +28,12 @@ test('sauvegarde : texture de pièce choisie validée', () => {
   assert.equal(validateSave({ studio: { coinPreset: '../../etc' } }).studio.coinPreset, null);
 });
 
+test('sauvegarde : lueur des pièces validée et bornée', () => {
+  const g = validateSave({ studio: { coinGlow: { enabled: true, color: '#ff00aa', intensity: 9 } } }).studio.coinGlow;
+  assert.deepEqual(g, { enabled: true, color: '#ff00aa', intensity: 1 });
+  assert.equal(validateSave({ studio: { coinGlow: { enabled: 'oui', color: 'rouge' } } }).studio.coinGlow.color, '#ffd23a');
+});
+
 test('sauvegarde : aller-retour JSON sans perte', () => {
   const s = defaultSave();
   s.bank = 1234;

@@ -26,6 +26,7 @@ export function defaultSave() {
     studio: {
       coinTint: null,
       coinPreset: null,
+      coinGlow: { enabled: false, color: '#ffd23a', intensity: 0.6 },
       trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' },
       lighting: { exposure: 1, sun: 1, hemi: 1 },
       files: { shirt: null, coin: null, board: null, train: null, model: null },
@@ -108,6 +109,9 @@ export function validateSave(input) {
   if (isObj(input.studio)) {
     const s = input.studio;
     out.studio.coinTint = color(s.coinTint, null);
+    if (isObj(s.coinGlow)) {
+      out.studio.coinGlow = { enabled: bool(s.coinGlow.enabled, false), color: color(s.coinGlow.color, '#ffd23a'), intensity: num(s.coinGlow.intensity, 0.6, 0.1, 1) };
+    }
     const preset = s.coinPreset === 'samoyede' ? 'husky' : s.coinPreset; // ancien nom du chien
     out.studio.coinPreset = oneOf(preset, COIN_SKINS.map((c) => c.id), null);
     if (isObj(s.trainLivery)) {

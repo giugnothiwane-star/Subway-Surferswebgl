@@ -164,6 +164,9 @@
           <p class="field">Texture de la pièce (fond retiré, seul l'animal apparaît)</p>
           <div id="st-coinskins" class="skins" role="radiogroup" aria-label="Textures de pièces"></div>
           <div class="colors"><label>Teinte de l'or <input type="color" id="st-coin" /></label></div>
+          <label class="toggle"><input type="checkbox" id="st-glowon" /> Lueur autour des pièces</label>
+          <div class="colors"><label>Couleur de la lueur <input type="color" id="st-glow" /></label></div>
+          <label class="field">Intensité de la lueur <input type="range" id="st-glowint" min="0.1" max="1" step="0.05" /></label>
           <label class="field">Image de face (PNG / JPG / WebP) <input type="file" id="st-coinfile" accept="image/png,image/jpeg,image/webp" /></label>
           <button class="btn small ghost" data-clear="coin">Retirer l'image</button>
         </div>

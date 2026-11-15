@@ -17,7 +17,7 @@ import { getMap } from '../data/maps.js';
 import { BOARDS, CHARACTERS, MODES, VERSIONS } from '../data/catalog.js';
 import { claim, commitRun, ensureMissions, snapshotBase, trackRun } from '../gameplay/Missions.js';
 import { buildTrain } from '../models/Trains.js';
-import { coinGeometry } from '../models/Props.js';
+import { coinGeometry, coinGlowMaterial } from '../models/Props.js';
 
 const _v = new THREE.Vector3();
 
@@ -85,7 +85,7 @@ export class Game {
     this.entities?.dispose();
     this.map = map;
     this.env = new Environment(this.scene, this.r, map, this.r.profile);
-    this.entities = new EntityRenderer(this.scene, map, this.r.profile, this.custom);
+    this.entities = new EntityRenderer(this.scene, map, this.r.profile, this.entityCustom());
     this.env.setLighting(this.save.studio.lighting);
     this.menuSim = new Simulation({ seed: 'menu', powerups: [] });
     this.audio.setAmbience(map.id);
@@ -109,9 +109,15 @@ export class Game {
     this.player?.setBoard(b.id, this.save.board.color || vb.color || b.color, this.save.board.color2 || b.color2, this.custom.boardTexture);
   }
 
+  // Réglages du studio transmis au rendu des entités (pièces, trains).
+  entityCustom() {
+    const st = this.save.studio;
+    return { coinTint: st.coinTint, coinGlow: st.coinGlow, coinTexture: this.custom.coinTexture, trainLivery: st.trainLivery, trainTexture: this.custom.trainTexture };
+  }
+
   applyCustom(custom) {
     this.custom = { ...this.custom, ...custom };
-    this.entities?.applyCustom({ coinTint: this.save.studio.coinTint, coinTexture: this.custom.coinTexture, trainLivery: this.save.studio.trainLivery, trainTexture: this.custom.trainTexture });
+    this.entities?.applyCustom(this.entityCustom());
     this.applyCharacter();
     this.applyBoard();
   }
@@ -360,6 +366,7 @@ export class Game {
       if (this.state === 'studio' && this.orbit) {
         this.orbit.update();
         if (this.studioSpin && this.studioObject) this.studioObject.rotation.y += dt * 0.6;
+        if (this.studioGlow) this.studioGlow.uniforms.uTime.value = this.time;
       } else this.rig.updateMenu(dt, this.player.group.position);
     }
     this.r.render(this.scene, this.rig.camera);
@@ -422,6 +429,15 @@ export class Game {
         face.userData.ownGeometry = true;
         mesh.add(face);
       }
+      const g = this.save.studio.coinGlow;
+      if (g.enabled) {
+        const halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), coinGlowMaterial(g.color, g.intensity));
+        halo.userData.ownGeometry = true;
+        halo.renderOrder = 4;
+        halo.frustumCulled = false;
+        mesh.add(halo);
+        this.studioGlow = halo.material;
+      } else this.studioGlow = null;
       mesh.position.set(0, 1.2, 0);
       this.studioObject = mesh;
       target.set(0, 1.2, 0);

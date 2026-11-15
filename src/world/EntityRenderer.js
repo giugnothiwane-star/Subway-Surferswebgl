@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { laneX } from '../gameplay/constants.js';
 import { trainFront } from '../gameplay/obstacles.js';
 import { TrainFactory } from '../models/Trains.js';
-import { barrierHighModel, barrierLowModel, coinGeometry, powerupModel, rampModel } from '../models/Props.js';
+import { barrierHighModel, barrierLowModel, coinGeometry, coinGlowMaterial, powerupModel, rampModel } from '../models/Props.js';
 import { makeTexture } from '../models/textures.js';
 
 const COIN_CAP = 700;
@@ -68,6 +68,14 @@ export class EntityRenderer {
     for (let i = COIN_CAP - 1; i >= 0; i--) this.coinFree.push(i);
     this.coins.count = 0;
     this.coinFaces = null;
+    // halo coloré autour des pièces (même matrices que les pièces)
+    this.coinGlow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), coinGlowMaterial(), COIN_CAP);
+    this.coinGlow.instanceMatrix = this.coins.instanceMatrix;
+    this.coinGlow.frustumCulled = false;
+    this.coinGlow.renderOrder = 4;
+    this.coinGlow.count = 0;
+    this.coinGlow.visible = false;
+    this.group.add(this.coinGlow);
     this.applyCustom(custom);
   }
 
@@ -76,6 +84,19 @@ export class EntityRenderer {
     this.custom = custom;
     if (custom.coinTint) this.coinMaterial.color.set(custom.coinTint);
     else this.coinMaterial.color.set(0xffc23a);
+    // lueur : halo + reflet lumineux de la couleur choisie
+    const glow = custom.coinGlow;
+    const on = !!(glow && glow.enabled);
+    this.coinGlow.visible = on;
+    if (on) {
+      this.coinGlow.material.uniforms.uColor.value.set(glow.color);
+      this.coinGlow.material.uniforms.uIntensity.value = glow.intensity;
+      this.coinMaterial.emissive.set(glow.color);
+      this.coinMaterial.emissiveIntensity = 0.05 + glow.intensity * 0.3;
+    } else {
+      this.coinMaterial.emissive.set(0x3a2200);
+      this.coinMaterial.emissiveIntensity = 0.25;
+    }
     if (this.coinFaces) {
       this.group.remove(this.coinFaces);
       this.coinFaces.geometry.dispose();
@@ -179,6 +200,7 @@ export class EntityRenderer {
 
   update(dt, sim, time) {
     this.frame++;
+    this.coinGlow.material.uniforms.uTime.value = time;
     const s = sim.s;
     const far = s + this.profile.drawDistance;
     const near = s - 18;
@@ -255,6 +277,7 @@ export class EntityRenderer {
       if (this._coinIds) for (const rec of this._coinIds.values()) if (rec.index > max) max = rec.index;
       this.coins.count = max + 1;
       if (this.coinFaces) this.coinFaces.count = max + 1;
+      this.coinGlow.count = max + 1;
       this.coins.instanceMatrix.needsUpdate = true;
     }
   }
@@ -320,6 +343,7 @@ export class EntityRenderer {
       this._coinIds.clear();
     }
     this.coins.count = 0;
+    this.coinGlow.count = 0;
     this.coinFree.sort((a, b) => b - a);
     this.coins.instanceMatrix.needsUpdate = true;
   }

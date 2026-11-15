@@ -146,6 +146,41 @@ export function powerupModel(type) {
   }
 }
 
+// Halo lumineux des pièces : billboard additif (toujours face à la caméra),
+// utilisable en InstancedMesh (taille prise dans la matrice d'instance).
+export function coinGlowMaterial(color = 0xffd23a, intensity = 0.6) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: { uColor: { value: new THREE.Color(color) }, uIntensity: { value: intensity }, uTime: { value: 0 } },
+    vertexShader: `uniform float uTime; varying vec2 vUv; varying float vFade; varying float vSeed;
+      void main(){
+        vUv = uv;
+        mat4 m = modelMatrix;
+        #ifdef USE_INSTANCING
+          m = modelMatrix * instanceMatrix;
+        #endif
+        vec4 center = m * vec4(0.0, 0.0, 0.0, 1.0);
+        float s = length(m[1].xyz);
+        vSeed = fract(center.z * 0.173 + center.x * 0.31);
+        vec4 mv = viewMatrix * center;
+        float pulse = 1.0 + 0.08 * sin(uTime * 4.0 + vSeed * 6.28);
+        mv.xy += position.xy * s * 1.9 * pulse;
+        vFade = clamp(1.0 - (-mv.z - 60.0) / 140.0, 0.0, 1.0);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `uniform vec3 uColor; uniform float uIntensity; varying vec2 vUv; varying float vFade; varying float vSeed;
+      void main(){
+        float d = length(vUv - 0.5) * 2.0;
+        float a = smoothstep(1.0, 0.25, d) * 0.8 + smoothstep(0.55, 0.42, abs(d - 0.48)) * 0.0;
+        a *= uIntensity * vFade;
+        if (a < 0.003) discard;
+        gl_FragColor = vec4(uColor * a, a);
+      }`,
+  });
+}
+
 // Bulle du bouclier : shader de Fresnel transparent.
 export function shieldBubbleMaterial(color = 0x59c8ff) {
   return new THREE.ShaderMaterial({

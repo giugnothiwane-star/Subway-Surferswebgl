@@ -362,6 +362,9 @@ export class UI {
     $('st-bc1').value = s.board.color || b.color;
     $('st-bc2').value = s.board.color2 || b.color2;
     $('st-coin').value = s.studio.coinTint || '#ffc23a';
+    $('st-glowon').checked = s.studio.coinGlow.enabled;
+    $('st-glow').value = s.studio.coinGlow.color;
+    $('st-glowint').value = s.studio.coinGlow.intensity;
     this.renderCoinSkins();
     $('st-trainon').checked = s.studio.trainLivery.enabled;
     $('st-t1').value = s.studio.trainLivery.body;
@@ -392,6 +395,10 @@ export class UI {
     $('st-bc1').addEventListener('input', (e) => { s().board.color = e.target.value; this.game.applyBoard(); });
     $('st-bc2').addEventListener('input', (e) => { s().board.color2 = e.target.value; this.game.applyBoard(); });
     $('st-coin').addEventListener('input', (e) => { s().studio.coinTint = e.target.value; this.game.applyCustom({}); this.setSubject('coin', true); });
+    const glow = () => { this.game.applyCustom({}); this.setSubject('coin', true); };
+    $('st-glowon').addEventListener('change', (e) => { s().studio.coinGlow.enabled = e.target.checked; glow(); });
+    $('st-glow').addEventListener('input', (e) => { s().studio.coinGlow.color = e.target.value; s().studio.coinGlow.enabled = true; $('st-glowon').checked = true; glow(); });
+    $('st-glowint').addEventListener('input', (e) => { s().studio.coinGlow.intensity = Number(e.target.value); s().studio.coinGlow.enabled = true; $('st-glowon').checked = true; glow(); });
     const train = () => { this.game.applyCustom({}); this.setSubject('train', true); };
     $('st-trainon').addEventListener('change', (e) => { s().studio.trainLivery.enabled = e.target.checked; train(); });
     $('st-t1').addEventListener('input', (e) => { s().studio.trainLivery.body = e.target.value; s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; train(); });
@@ -463,7 +470,7 @@ export class UI {
       const d = this.save;
       d.look = {};
       d.board = { color: null, color2: null };
-      d.studio = { coinTint: null, coinPreset: null, trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' }, lighting: { exposure: 1, sun: 1, hemi: 1 }, files: { shirt: null, coin: null, board: null, train: null, model: null } };
+      d.studio = { coinTint: null, coinPreset: null, coinGlow: { enabled: false, color: '#ffd23a', intensity: 0.6 }, trainLivery: { enabled: false, body: '#2f7fd8', stripe: '#ffd23a', accent: '#ff4f6d' }, lighting: { exposure: 1, sun: 1, hemi: 1 }, files: { shirt: null, coin: null, board: null, train: null, model: null } };
       try { await AssetDB.clear(); } catch { /* ignoré */ }
       this.game.custom = {};
       const rig = await this.game.assets.loadCharacter();
