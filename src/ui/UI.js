@@ -198,7 +198,7 @@ export class UI {
       return h('div', { class: `card${sel ? ' sel' : ''}` },
         h('div', { class: 'swatches' }, ...[L.hairColor, L.skin, L.shirt, L.pants, L.shoes].map((col) => h('span', { style: { background: col } }))),
         h('h4', { text: c.name }),
-        h('p', { class: 'small muted', text: `${{ spiky: 'Pics', short: 'Courte', bun: 'Chignon', mohawk: 'Crête', long: 'Longue' }[L.hair]} · ${L.accessories.join(', ') || 'aucun accessoire'}` }),
+        h('p', { class: 'small muted', text: `${{ spiky: 'Pics', short: 'Courte', bun: 'Chignon', mohawk: 'Crête', long: 'Longue' }[L.hair]} · ${L.accessories.map((a) => ({ cap: 'casquette', headphones: 'casque audio', glasses: 'lunettes', backpack: 'sac à dos', scarf: 'écharpe' }[a])).join(', ') || 'aucun accessoire'}` }),
         h('div', { class: 'actions' }, owned
           ? h('button', { class: `btn small ${sel ? '' : 'primary'}`, disabled: sel, text: sel ? 'Équipé' : 'Choisir', onclick: () => { this.click(); s.selected.character = c.id; s.look = {}; this.storage.save(); this.game.applyCharacter(); this.renderCharacters(); } })
           : h('button', { class: 'btn small', disabled: s.bank < c.price, text: `Débloquer · ${fmt(c.price)}`, onclick: () => this.buy('characters', c) })),
@@ -281,7 +281,7 @@ export class UI {
     if (this.save.lastSeed && !$('s-seed').value) $('s-seed').value = this.save.lastSeed;
     const i = this.game.r.info();
     $('s-perf').textContent = `Profil actif : ${i.profile} · résolution ×${i.dpr.toFixed(2)} · ${i.fps.toFixed(0)} FPS mesurés · ${i.calls} draw calls`;
-    $('s-version').textContent = `MNNROW ${__APP_VERSION__} · rendu ${this.game.r.renderer.capabilities.isWebGL2 ? 'WebGL 2' : 'WebGL 1'} · personnage : ${this.game.assets.source.character === 'glb' ? 'modèle GLB' : 'généré'}`;
+    $('s-version').textContent = `MNNROW ${typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'} · rendu ${this.game.r.renderer.capabilities.isWebGL2 ? 'WebGL 2' : 'WebGL 1'} · personnage : ${this.game.assets.source.character === 'glb' ? 'modèle GLB' : 'généré'}`;
   }
 
   bindSettings() {
@@ -484,6 +484,8 @@ export class UI {
   // ---- en jeu --------------------------------------------------------------------
   showHUD() {
     this.hudCache = {};
+    // évite qu'Espace / Entrée réactive le bouton cliqué (JOUER, Rejouer…)
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
     this.showScreen('hud');
   }
 

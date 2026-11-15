@@ -226,40 +226,32 @@ modèles, il faut une machine Linux, Windows ou macOS. Options :
 
 ---
 
-## 5. Remplacer les modèles du jeu
+## 5. Ce que le jeu charge réellement, et comment remplacer un modèle
 
-1. Copier les GLB voulus dans `public/assets/models/…`, par exemple :
+Le jeu (dossier `src/`) a **deux sources de modèles**, toutes deux originales :
 
-   ```
-   public/assets/models/trains/train_urban.glb
-   public/assets/models/trains/train_modern.glb
-   public/assets/models/trains/train_freight_loco.glb
-   public/assets/models/trains/wagon_container.glb
-   public/assets/models/trains/wagon_tank.glb
-   public/assets/models/pickups/coin.glb
-   public/assets/models/pickups/magnet.glb
-   public/assets/models/hoverboards/hoverboard_<style>.glb
-   public/assets/models/obstacles/barrier_low.glb  (barrier_high, ramp)
-   public/assets/models/buildings/building_a.glb   (b, c)
-   public/assets/models/props/lamp.glb             (rail_segment, palm, fir, fir_snow, cactus, rock, station)
-   ```
-   Adapter les chemins à ce qu'attend le code du jeu (manifeste d'assets,
-   loader…) : ce dossier `blender/` ne modifie rien en dehors de lui-même.
-2. Chargement type avec Three.js :
+| Source | Où | Utilisée par le jeu ? |
+|---|---|---|
+| Modèles générés en JavaScript (`src/models/*.js`) puis **exportés en GLB** par `npm run export:models` | `public/assets/models/**.glb` | **Oui** pour le personnage : `characters/mnnrow_runner.glb` (squelette + 17 animations) est chargé par `GLTFLoader` au démarrage, avec repli automatique sur la génération en code si le fichier manque. Les autres GLB de ce dossier sont fournis pour être ouverts/modifiés dans Blender ; en jeu, trains, pièces, bonus et décors sont construits en code (aucun téléchargement, instanciation optimisée). |
+| Scripts **Blender** de ce dossier | `blender/exports/*.glb` | **Non, pas directement.** Ce sont des variantes Blender indépendantes, utiles comme base de travail artistique. |
 
-   ```js
-   import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-   const loader = new GLTFLoader();
-   loader.load('/assets/models/trains/train_urban.glb', (gltf) => {
-     const train = gltf.scene;          // déjà en mètres, Y-up
-     train.position.set(laneX, 0, z);   // y = 0 = dessus du rail
-     scene.add(train);
-   });
-   ```
-   Lanes : largeur 2,5 m, donc centres à x = −2,5 / 0 / +2,5.
-3. Optionnel : compresser avec
-   `npx @gltf-transform/cli optimize in.glb out.glb` (Draco/meshopt) si le
-   poids compte (les fichiers actuels font de 8 à 197 Ko).
+Pour **utiliser ton propre personnage** sans toucher au code : ouvre le jeu →
+**Studio → Modèle 3D** et importe un `.glb` (ou `.gltf` + fichiers, ou un `.zip`).
+Le fichier est vérifié puis stocké sur l'appareil. Les animations dont le nom
+contient `idle`, `run`, `jump`, `roll`/`slide`, `death`… sont reliées
+automatiquement aux états du jeu.
+
+Pour **remplacer le personnage par défaut** pour tout le monde : exporte depuis
+Blender un GLB qui conserve les noms d'os (`hips`, `spine`, `chest`, `neck`,
+`head`, `upperArmL`…, voir `src/models/Character.js`) et les noms de clips
+(`idle`, `run`, `sprint`, `jump`, `fall`, `land`, `roll`, `leanLeft`,
+`leanRight`, `hoverboard`, `collect`, `hit`, `death`, `victory`, `menu`,
+`jetpack`, `runStart`), puis remplace
+`public/assets/models/characters/mnnrow_runner.glb`.
+
+Les modèles Blender sont en mètres, Y-up une fois exportés ; voies de 2,5 m
+(centres x = −2,5 / 0 / +2,5), dessus du rail en y = 0. Compression optionnelle :
+`npx @gltf-transform/cli optimize in.glb out.glb`.
 
 ---
 

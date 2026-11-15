@@ -501,7 +501,7 @@ export class Environment {
     wall.holes.push(hole);
     const portalGeo = this.track(new THREE.ExtrudeGeometry(wall, { depth: 2, bevelEnabled: false }));
     portalGeo.translate(0, 0, -1);
-    const portalMat = this.track(new THREE.MeshStandardMaterial({ color: new THREE.Color(z.tunnel.color).offsetHSL(0, 0, 0.05), roughness: 0.95 }));
+    const portalMat = this.track(new THREE.MeshStandardMaterial({ color: z.tunnel.portal ?? new THREE.Color(z.tunnel.color).offsetHSL(0, 0, 0.05), roughness: 0.95, flatShading: true }));
     this.portalPool = new THREE.InstancedMesh(portalGeo, portalMat, 12);
     const b = P.bridgeGeo(z.bridge.color);
     this.track(b.geometry);

@@ -47,7 +47,7 @@ export const MAPS = [
       { type: 'tree', x: [8, 9.5], count: [0, 2], scale: [0.7, 1] },
       { type: 'powerPole', x: [7.4, 7.6], every: 40, prob: 0.5 },
     ],
-    zones: { tunnel: { color: 0x5a5f69, ring: 0xffc23d }, bridge: { color: 0xc0392b }, station: { roof: 0xd94f3a, floor: 0xbfb6a8 } },
+    zones: { tunnel: { portal: 0x8a8f99, color: 0x5a5f69, ring: 0xffc23d }, bridge: { color: 0xc0392b }, station: { roof: 0xd94f3a, floor: 0xbfb6a8 } },
     ambience: { particles: 'none' },
   },
   {
@@ -94,7 +94,7 @@ export const MAPS = [
       { type: 'rooftop', onBuildings: 0.4 },
     ],
     neonSigns: [['NEO 24/7', '#ff3bd4'], ['RAMEN-BOT', '#00e5ff'], ['PIXEL', '#ffd23a'], ['MNN TOWER', '#7a5cff'], ['ARCADE', '#5cff9d'], ['SKY HOTEL', '#ff7a3b']],
-    zones: { tunnel: { color: 0x22202e, ring: 0xff3bd4 }, bridge: { color: 0x7a5cff }, station: { roof: 0x2a2d40, floor: 0x3a3644 } },
+    zones: { tunnel: { portal: 0x1c1b2e, color: 0x22202e, ring: 0xff3bd4 }, bridge: { color: 0x7a5cff }, station: { roof: 0x2a2d40, floor: 0x3a3644 } },
     ambience: { particles: 'rain', neonFlicker: true },
   },
   {
@@ -141,7 +141,7 @@ export const MAPS = [
       { type: 'lamp', x: [4.9, 5.1], every: 30, side: 'right', lampColor: 0xffe1a8 },
       { type: 'rock', x: [-30, -24], count: [0, 2], side: 'left', scale: [1, 2.2] },
     ],
-    zones: { tunnel: { color: 0x9c7a5a, ring: 0xfff1d6 }, bridge: { color: 0xfff1d6 }, station: { roof: 0x43c4b0, floor: 0xe0d2b8 } },
+    zones: { tunnel: { portal: 0xc9a27a, color: 0x9c7a5a, ring: 0xfff1d6 }, bridge: { color: 0xfff1d6 }, station: { roof: 0x43c4b0, floor: 0xe0d2b8 } },
     ambience: { particles: 'none', waves: true },
   },
   {
@@ -178,7 +178,7 @@ export const MAPS = [
       { type: 'building', x: [16, 24], count: [0, 1], h: [5, 7], w: [6, 8], d: [6, 8], prob: 0.4 },
       { type: 'lamp', x: [4.9, 5.1], every: 40, lampColor: 0xffe1a8 },
     ],
-    zones: { tunnel: { color: 0x6f7a88, ring: 0xd8e2ee }, bridge: { color: 0x8a5a3a }, station: { roof: 0x8a5a3a, floor: 0xd8e2ee } },
+    zones: { tunnel: { portal: 0xdfe8f2, color: 0x6f7a88, ring: 0xd8e2ee }, bridge: { color: 0x8a5a3a }, station: { roof: 0x8a5a3a, floor: 0xd8e2ee } },
     ambience: { particles: 'snow' },
   },
   {
@@ -218,7 +218,7 @@ export const MAPS = [
       { type: 'building', x: [14, 22], count: [0, 1], h: [4, 7], w: [6, 9], d: [6, 9], prob: 0.35 },
       { type: 'powerPole', x: [6.8, 7.2], every: 40 },
     ],
-    zones: { tunnel: { color: 0xa0704a, ring: 0xf2b134 }, bridge: { color: 0x8a5a3a }, station: { roof: 0xd35400, floor: 0xd9c2a0 } },
+    zones: { tunnel: { portal: 0xc89a62, color: 0xa0704a, ring: 0xf2b134 }, bridge: { color: 0x8a5a3a }, station: { roof: 0xd35400, floor: 0xd9c2a0 } },
     ambience: { particles: 'dust' },
   },
   {
@@ -255,7 +255,7 @@ export const MAPS = [
       { type: 'mountain', x: [100, 170], count: [1, 2], scale: [34, 56], h: [40, 70], color: 0x4f7a5a, snow: false },
       { type: 'lamp', x: [4.9, 5.1], every: 36, lampColor: 0xb8f477 },
     ],
-    zones: { tunnel: { color: 0x55604f, ring: 0xb8f477 }, bridge: { color: 0x6b4529 }, station: { roof: 0x2e8b57, floor: 0xbfb6a8 } },
+    zones: { tunnel: { portal: 0x5f7a52, color: 0x55604f, ring: 0xb8f477 }, bridge: { color: 0x6b4529 }, station: { roof: 0x2e8b57, floor: 0xbfb6a8 } },
     ambience: { particles: 'leaves' },
   },
 ];

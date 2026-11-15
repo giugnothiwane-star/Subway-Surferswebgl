@@ -32,5 +32,9 @@ for (const id of maps) {
   await page.screenshot({ path: `public/assets/maps/${id}.jpg`, type: 'jpeg', quality: 78 });
   console.log(id, JSON.stringify(await page.evaluate(() => window.__MNNROW.info().sim)));
 }
+// vignette de l'édition Ultimate : le personnage dans le menu
+await page.evaluate(() => { const g = window.__MNNROW.game; g.quitToMenu(); g.setMap('metro'); document.getElementById('ui').style.visibility = 'hidden'; });
+await page.waitForTimeout(4000);
+await page.screenshot({ path: 'public/assets/maps/ultimate.jpg', type: 'jpeg', quality: 78 });
 console.log(errors.length ? errors.join('\n') : 'no errors');
 await browser.close();

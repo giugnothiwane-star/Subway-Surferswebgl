@@ -87,7 +87,7 @@ await check('5. Démarrage d\'une partie (bouton JOUER)', async () => {
   await page.click('[data-nav="play"]');
   await waitFor(() => window.__MNNROW.info().state === 'playing');
   assert(await visible('hud'), 'HUD absent');
-  await wait(1200);
+  await waitFor(() => window.__MNNROW.info().sim.s > 3, null, 15000).catch(() => {});
   const i = await info();
   assert(i.sim.s > 3, `distance ${i.sim.s}`);
   return `s=${i.sim.s.toFixed(1)} m`;
@@ -108,17 +108,20 @@ await check('6. Déplacement gauche / droite (clavier)', async () => {
 });
 
 await check('7. Saut', async () => {
+  await waitFor(() => { const s = window.__MNNROW.info().sim; return s.onGround && !s.rolling; }, null, 8000);
   await page.keyboard.press('Space');
-  let maxY = 0;
-  for (let k = 0; k < 8; k++) { await wait(60); maxY = Math.max(maxY, (await info()).sim.y); }
+  await waitFor(() => window.__MNNROW.info().sim.y > 0.5, null, 4000).catch(() => {});
+  let maxY = (await info()).sim.y;
+  for (let k = 0; k < 4; k++) { await wait(60); maxY = Math.max(maxY, (await info()).sim.y); }
   assert(maxY > 0.8, `hauteur max ${maxY}`);
   await wait(700);
   return `hauteur max ${maxY.toFixed(2)} m`;
 });
 
 await check('8. Roulade (hauteur de collision réduite)', async () => {
+  await waitFor(() => window.__MNNROW.info().sim.onGround, null, 8000);
   await page.keyboard.press('ArrowDown');
-  await wait(80);
+  await waitFor(() => window.__MNNROW.game.sim.rollTime > 0, null, 3000).catch(() => {});
   const r = await game(() => ({ rolling: window.__MNNROW.game.sim.rollTime > 0, h: window.__MNNROW.game.sim.height, anim: window.__MNNROW.game.player.state }));
   assert(r.rolling && r.h < 1, JSON.stringify(r));
   return `hauteur ${r.h} m, animation ${r.anim}`;
