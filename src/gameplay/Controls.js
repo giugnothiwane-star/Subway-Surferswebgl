@@ -1,0 +1,112 @@
+import { DEFAULT_KEYS, actionFor } from './keymap.js';
+
+// Commandes PC (clavier) et mobile (swipes en Pointer Events, double tap,
+// boutons tactiles). Les gestes ne font pas défiler la page et les touches
+// sont ignorées pendant la saisie dans un champ.
+export class Controls {
+  constructor(target, onAction, opts = {}) {
+    this.target = target;
+    this.onAction = onAction;
+    this.enabled = false;
+    this.sensitivity = opts.sensitivity ?? 1;
+    this.keys = opts.keys || DEFAULT_KEYS; // touches configurables (Paramètres)
+    this.capturing = false; // vrai pendant le choix d'une nouvelle touche
+    this.pointers = new Map();
+    this.lastTap = 0;
+    this._key = (e) => this.onKey(e);
+    this._down = (e) => this.onDown(e);
+    this._move = (e) => this.onMove(e);
+    this._up = (e) => this.onUp(e);
+    window.addEventListener('keydown', this._key);
+    target.addEventListener('pointerdown', this._down);
+    target.addEventListener('pointermove', this._move);
+    target.addEventListener('pointerup', this._up);
+    target.addEventListener('pointercancel', this._up);
+    target.style.touchAction = 'none';
+  }
+
+  static isTyping(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  }
+
+  onKey(e) {
+    if (this.capturing || Controls.isTyping(e.target)) return;
+    const action = actionFor(this.keys, e.key);
+    if (!action) return;
+    if (this.enabled || action === 'pause') e.preventDefault();
+    if (e.repeat) return; // pas de double action en maintenant la touche
+    if (this.enabled || action === 'pause') this.onAction(action, 'keyboard');
+  }
+
+  threshold() {
+    const base = Math.min(window.innerWidth, window.innerHeight) * 0.06;
+    return Math.max(18, Math.min(60, base)) / this.sensitivity;
+  }
+
+  onDown(e) {
+    if (!this.enabled || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), fired: false });
+    try {
+      this.target.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* capture indisponible : le geste reste suivi sans capture */
+    }
+  }
+
+  onMove(e) {
+    const p = this.pointers.get(e.pointerId);
+    if (!p || p.fired || !this.enabled) return;
+    const dx = e.clientX - p.x;
+    const dy = e.clientY - p.y;
+    const th = this.threshold();
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < th) return;
+    // le geste est reconnu dès que le seuil est franchi (réactivité)
+    p.fired = true;
+    if (Math.abs(dx) > Math.abs(dy)) this.onAction(dx > 0 ? 'right' : 'left', 'swipe');
+    else this.onAction(dy < 0 ? 'jump' : 'roll', 'swipe');
+  }
+
+  onUp(e) {
+    const p = this.pointers.get(e.pointerId);
+    this.pointers.delete(e.pointerId);
+    if (!p || p.fired || !this.enabled) return;
+    // geste rapide dont les « move » ont été regroupés : on le traite comme un swipe
+    const dx = e.clientX - p.x;
+    const dy = e.clientY - p.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) >= this.threshold()) {
+      if (Math.abs(dx) > Math.abs(dy)) this.onAction(dx > 0 ? 'right' : 'left', 'swipe');
+      else this.onAction(dy < 0 ? 'jump' : 'roll', 'swipe');
+      this.lastTap = 0;
+      return;
+    }
+    if (Math.max(Math.abs(dx), Math.abs(dy)) > this.threshold() * 0.5) return; // ni tap ni swipe
+    const now = performance.now();
+    if (now - p.t < 250) {
+      if (now - this.lastTap < 320) {
+        this.onAction('board', 'doubletap');
+        this.lastTap = 0;
+      } else this.lastTap = now;
+    }
+  }
+
+  bindButtons(root) {
+    root.querySelectorAll('[data-act]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (this.enabled || b.dataset.act === 'pause') this.onAction(b.dataset.act, 'button');
+      });
+    });
+  }
+
+  dispose() {
+    window.removeEventListener('keydown', this._key);
+    this.target.removeEventListener('pointerdown', this._down);
+    this.target.removeEventListener('pointermove', this._move);
+    this.target.removeEventListener('pointerup', this._up);
+    this.target.removeEventListener('pointercancel', this._up);
+  }
+}

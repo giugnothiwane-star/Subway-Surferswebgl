@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><title>MNNROW export GLB</title></head><body>
+<script type="module">
+// Page utilisée par tools/export-models.mjs : construit chaque modèle et l'exporte en GLB.
+import * as THREE from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { createCharacter } from '/src/models/Character.js';
+import { buildTrain } from '/src/models/Trains.js';
+import * as P from '/src/models/Props.js';
+import { buildHoverboard, BOARD_STYLES } from '/src/models/Hoverboards.js';
+const exporter = new GLTFExporter();
+const toB64 = (buf) => { let s = ''; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); };
+const grouped = (name, o) => { const m = new THREE.Mesh(o.geometry, o.materials.length === 1 ? o.materials[0] : o.materials); m.name = name; const g = new THREE.Group(); g.name = name; g.add(m); return g; };
+async function exp(obj, animations = []) {
+  obj.traverse((o) => { o.visible = true; });
+  const res = await exporter.parseAsync(obj, { binary: true, animations, onlyVisible: false, maxTextureSize: 1024 });
+  return toB64(res);
+}
+window.exportAll = async () => {
+  const out = {};
+  const ch = createCharacter();
+  out['characters/mnnrow_runner.glb'] = await exp(ch.root, ch.clips);
+  const liv = { body: 0x2f7fd8, stripe: 0xffd23a, accent: 0xff4f6d, graffiti: true, destination: 'CENTRAL' };
+  out['trains/train_urban.glb'] = await exp(buildTrain('urban', liv, 2));
+  out['trains/train_modern.glb'] = await exp(buildTrain('modern', { body: 0xf4f6f8, stripe: 0xe63946, accent: 0x3ec5ff, roof: 0xdde3ea }, 2));
+  out['trains/train_freight.glb'] = await exp(buildTrain('freight', { body: 0xf2b134, stripe: 0x1d2329, accent: 0x1d2329, cargo: [0xd9572b, 0x2b7bd9, 0x3fa34d], tank: 0xc9d1da }, 3));
+  const c = P.coinGeometry(); const coin = new THREE.Mesh(c.geometry, c.material); coin.name = 'Coin';
+  out['coins/coin.glb'] = await exp(coin);
+  for (const t of ['magnet', 'jetpack', 'sneakers', 'shield', 'multiplier']) out[`powerups/${t}.glb`] = await exp(P.powerupModel(t));
+  for (const s of BOARD_STYLES) out[`powerups/hoverboard_${s}.glb`] = await exp(buildHoverboard(s, '#65d9ff', '#ffffff'));
+  out['environment/barrier_low.glb'] = await exp(P.barrierLowModel());
+  out['environment/barrier_high.glb'] = await exp(P.barrierHighModel());
+  out['environment/ramp.glb'] = await exp(P.rampModel());
+  const env = { lamp: P.lampPostGeo(), palm: P.palmGeo(), fir_snow: P.firGeo(true), tree: P.treeGeo(), cactus: P.cactusGeo(), station: P.stationGeo(), tunnel: P.tunnelGeo(), bridge: P.bridgeGeo(), billboard: P.billboardGeo(1), rooftop: P.rooftopGeo() };
+  for (const [k, v] of Object.entries(env)) out[`environment/${k}.glb`] = await exp(grouped(k, v));
+  return out;
+};
+window.__ready = true;
+</script></body></html>

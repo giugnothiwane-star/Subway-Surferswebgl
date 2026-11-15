@@ -1,0 +1,22 @@
+// Test de fumée rapide : menu, partie, captures (outil de développement).
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright');
+const url = process.argv[2] || 'http://localhost:5199/';
+const out = process.argv[3] || '.';
+const vw = +(process.argv[4] || 412), vh = +(process.argv[5] || 915);
+const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+const page = await browser.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 1 });
+const logs = [];
+page.on('pageerror', (e) => logs.push('PAGEERROR ' + e.message));
+page.on('console', (m) => { if (['error', 'warning'].includes(m.type())) logs.push(m.type() + ': ' + m.text()); });
+await page.goto(url);
+await page.waitForFunction(() => window.__MNNROW, null, { timeout: 90000 });
+await page.waitForTimeout(1500);
+await page.screenshot({ path: `${out}/menu.png` });
+await page.evaluate(() => { window.__MNNROW.game.autopilot = true; window.__MNNROW.game.startRun('SMOKE1'); });
+await page.waitForTimeout(6000);
+await page.screenshot({ path: `${out}/run.png` });
+console.log(JSON.stringify(await page.evaluate(() => window.__MNNROW.info())));
+console.log(logs.slice(0, 30).join('\n') || 'no console errors');
+await browser.close();

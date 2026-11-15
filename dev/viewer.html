@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#888}canvas{display:block}</style></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createCharacter, applyLook } from '/src/models/Character.js';
+import { buildTrain } from '/src/models/Trains.js';
+import * as P from '/src/models/Props.js';
+import { buildHoverboard, BOARD_STYLES } from '/src/models/Hoverboards.js';
+const q = new URLSearchParams(location.search);
+const r = new THREE.WebGLRenderer({antialias:true}); r.setSize(1200,700); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x8fb7d8);
+scene.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(),0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff,0x445566,1.2)); const d=new THREE.DirectionalLight(0xffffff,2); d.position.set(5,10,7); scene.add(d);
+const cam = new THREE.PerspectiveCamera(40,1200/700,0.1,200);
+const what = q.get('m')||'char';
+let mixer;
+if (what==='char'){
+  const c = createCharacter(); applyLook(c.root,{hair:q.get('hair')||'spiky',accessories:(q.get('acc')||'').split(',')});
+  const clipName=q.get('clip'); const t=+q.get('t')||0;
+  const poses = clipName? [clipName] : ['idle','run','jump','roll','hoverboard','death'];
+  poses.forEach((n,i)=>{ const cc = i===0? c : createCharacter(); applyLook(cc.root,{hair:['spiky','short','bun','mohawk','long','spiky'][i]}); cc.root.position.x=(i-(poses.length-1)/2)*1.1; scene.add(cc.root);
+    const m=new THREE.AnimationMixer(cc.root); const clip=cc.clips.find(x=>x.name===n); m.clipAction(clip).play(); m.update(t || clip.duration*0.3); });
+  cam.position.set(0,1.4, 5.2); cam.lookAt(0,0.9,0);
+  const g=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:0x666666})); g.rotation.x=-Math.PI/2; scene.add(g);
+} else if (what==='train'){
+  const liv={body:0x2f7fd8,stripe:0xffd23a,accent:0xff4f6d,graffiti:true};
+  ['urban','modern','freight'].forEach((s,i)=>{const t=buildTrain(s,liv,2); t.position.set((i-1)*3.2,0,0); scene.add(t)});
+  cam.position.set(q.get('side')?14:5, 4.5, q.get('side')? -10: 9); cam.lookAt(0,1.5,-6);
+} else if (what==='props'){
+  const items=[P.coinGeometry(), null];
+  const coin=new THREE.Mesh(P.coinGeometry().geometry,P.coinGeometry().material); coin.position.set(-3,1,0); coin.rotation.y=0.5; scene.add(coin);
+  ['magnet','jetpack','sneakers','shield','multiplier'].forEach((t,i)=>{const m=P.powerupModel(t); m.position.set(-2+i*1.1,1,0); m.scale.setScalar(1.5); scene.add(m)});
+  BOARD_STYLES.forEach((s,i)=>{const b=buildHoverboard(s,'#ff5ac8','#ffffff'); b.position.set(-3+i*1.5,0,2); b.rotation.y=Math.PI/2; scene.add(b)});
+  const bl=P.barrierLowModel(); bl.position.set(-3,0,-3); scene.add(bl); const bh=P.barrierHighModel(); bh.position.set(0,0,-3); scene.add(bh); const rp=P.rampModel(); rp.position.set(3,0,-2); scene.add(rp);
+  cam.position.set(0,4,8); cam.lookAt(0,0.8,-0.5);
+} else if (what==='decor'){
+  const list=[P.lampPostGeo(),P.palmGeo(),P.firGeo(true),P.treeGeo(),P.cactusGeo(),P.rockGeo(),P.rooftopGeo(),P.billboardGeo(1),P.umbrellaGeo(),P.hutGeo(),P.crystalGeo(),P.powerPoleGeo(), P.neonSignGeo('NEON','#ff3bd4'), P.stationGeo(), P.tunnelGeo(), P.bridgeGeo()];
+  list.forEach((o,i)=>{const m=new THREE.Mesh(o.geometry,o.materials.length===1?o.materials[0]:o.materials); m.position.set((i%8-3.5)*4.5,0,-Math.floor(i/8)*14); scene.add(m)});
+  cam.position.set(0,9,22); cam.lookAt(0,3,-6);
+}
+r.render(scene,cam); window.__done=true;
+</script></body></html>
