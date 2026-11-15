@@ -32,6 +32,9 @@ Tests mentionnés : `npm test` (tests Node) et `node tools/e2e.mjs` (navigateur 
 | B22 | Moyenne | Couleurs du personnage modifiées sur le mauvais matériau quand un skin est actif | Changer une couleur avec la Galaxie active | Lecture du code (nouveau système de skins) | `src/models/Character.js` | `applyLook` agit sur le matériau d'origine | e2e Galaxie | Corrigé |
 | B23 | Basse | Texture de l'eau différente à chaque chargement (`Math.random`) | Lecture du code | Confirmée | `src/world/Environment.js` | Tirages déterministes | Capture | Corrigé |
 | B24 | Basse | HUD : deux chronos en pastilles peu lisibles (demande joueur) | Retour joueur | Confirmée | `index.html`, `src/ui/UI.js`, `src/styles/main.css` | Un seul chrono MM:SS.cc, police Orbitron, case arrondie, rouge et figé à la chute ; chrono « sans pièce » retiré | e2e Chrono | Corrigé |
+| B25 | Haute | On traversait les trains de face quand un bouclier, un hoverboard ou le mode Zen absorbait le choc (le wagon devenait « fantôme ») | Foncer sur un train avec un hoverboard | Confirmée (lecture du code + test Node) | `src/gameplay/Simulation.js` | Un train reste toujours solide : le choc absorbé fait rebondir sur le toit (montée lissée à l'écran) | 2 tests Node (fixe et mobile, bouclier/hoverboard/Zen) | Corrigé |
+| B26 | Moyenne | Image étirée sur les bords : champ de vision trop large (≈100° horizontal en paysage, 64° vertical en portrait) | Téléphone en paysage, PC 16:9 | Confirmée (calcul + captures) | `src/core/CameraRig.js` | Champ horizontal borné à 72°, vertical à 54° ; caméra reculée (« dolly zoom ») et inclinaison calculée pour garder le personnage entier à l'écran | e2e Caméra + captures portrait/paysage/PC | Corrigé |
+| B27 | Moyenne | Image pixelisée sur mobile : la résolution adaptative descendait jusqu'à 60 % dès les premières images (compilation des shaders) | Lecture du code | Confirmée | `src/core/Renderer.js` | Minimum relevé (85 % / 100 % / 125 %), premières mesures ignorées, ombres coupées avant la résolution, anticrénelage en MEDIUM | e2e | Corrigé |
 
 ## Nouvelles fonctions vérifiées
 
@@ -44,7 +47,7 @@ Tests mentionnés : `npm test` (tests Node) et `node tools/e2e.mjs` (navigateur 
 | Cape pendant les sauts et roulades | 14 échantillons : aucune valeur NaN, déplacement ≤ 0,92 m, toujours attachée au torse et visible |
 | Qualité LOW du shader Galaxie | Compile et reste reconnaissable (capture) |
 | Nouvelles textures (façades brique/pierre/panneaux/rondins/crépi, fenêtres encadrées, ballast en pierres, asphalte fissuré, sable ridé, neige, herbe, traverses en bois, toits) | Captures des 6 cartes en portrait et paysage, aucune erreur console ; relief (cartes de normales) désactivé en LOW |
-| Chrono | Police Orbitron chargée, bord arrondi 16 px, figé à la chute et identique sur l'écran de fin (e2e) |
+| Chrono | Cadran à aiguille, afficheur LCD en filigrane, barre des secondes, chiffres à largeur fixe ; « STOP » rouge à la chute, identique sur l'écran de fin (e2e + captures) |
 
 ## Bugs et limites encore connus
 

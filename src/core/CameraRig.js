@@ -46,16 +46,27 @@ export class CameraRig {
     if (!this.reduced) this.shake = Math.min(1, this.shake + amount);
   }
 
-  // Paramètres adaptés à l'écran : en portrait, on recule et on monte pour
-  // garder les trois voies lisibles.
+  // Paramètres adaptés à l'écran. Un champ de vision trop large étire l'image
+  // sur les bords (haut en portrait, gauche/droite en paysage) : on borne le
+  // champ HORIZONTAL à ~72° et le champ vertical à ~54°, puis on recule la
+  // caméra pour garder les trois voies lisibles.
   framing() {
-    const portrait = this.aspect < 0.8;
-    return {
-      dist: portrait ? 7.6 : 5.8,
-      height: portrait ? 4.9 : 3.8,
-      baseFov: portrait ? 60 : 58,
-      lookAhead: portrait ? 15 : 14,
-    };
+    const a = this.aspect;
+    const portrait = a < 0.8;
+    const deg = 180 / Math.PI;
+    const vFromH = (h) => 2 * Math.atan(Math.tan(h / 2 / deg) / a) * deg;
+    const baseFov = Math.max(36, Math.min(portrait ? 54 : 50, vFromH(72)));
+    // « dolly zoom » : même cadrage que l'ancienne vue large, mais caméra plus
+    // éloignée et objectif plus serré -> beaucoup moins de déformation.
+    const ref = portrait ? { fov: 60, dist: 7.6, height: 4.9 } : { fov: 58, dist: 5.8, height: 3.8 };
+    const k = Math.tan(ref.fov / 2 / deg) / Math.tan(baseFov / 2 / deg);
+    const dist = ref.dist * k;
+    const height = ref.height * Math.sqrt(k);
+    // inclinaison choisie pour que le personnage reste à ~75 % de la hauteur
+    // de l'écran, quel que soit le format (les pieds ne sont jamais coupés)
+    const pitch = Math.atan((height - 1) / dist) - 0.5 * (baseFov / 2 / deg);
+    const lookAhead = Math.max(6, (height - 0.6) / Math.tan(pitch) - dist);
+    return { dist, height, baseFov, lookAhead, fovKick: portrait ? 2 : 3 };
   }
 
   updateGame(dt, sim, zones) {
@@ -108,8 +119,7 @@ export class CameraRig {
     const vx = dt > 0 ? (this.pos.x - prevX) / dt : 0;
     this.roll = damp(this.roll, this.reduced ? 0 : Math.max(-0.05, Math.min(0.05, -vx * 0.012)), 8, dt);
     // FOV dynamique selon la vitesse (désactivé en mouvements réduits)
-    const portraitView = this.aspect < 0.8;
-    const fov = f.baseFov + (this.reduced ? 0 : speedK * (portraitView ? 4 : 7) + (jet ? 3 : 0));
+    const fov = f.baseFov + (this.reduced ? 0 : speedK * f.fovKick + (jet ? 2 : 0));
     this.camera.fov = damp(this.camera.fov, fov, 2, dt);
     this.apply(dt);
   }

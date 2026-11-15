@@ -6,9 +6,9 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { setMaxAnisotropy } from '../models/textures.js';
 
 export const PROFILES = {
-  low: { name: 'LOW', dprMax: 1.0, dprMin: 0.6, shadows: false, shadowSize: 0, drawDistance: 160, density: 0.55, particles: 0.4, antialias: false, lod: 60 },
-  medium: { name: 'MEDIUM', dprMax: 1.5, dprMin: 0.75, shadows: true, shadowSize: 1024, drawDistance: 200, density: 0.8, particles: 0.7, antialias: false, lod: 85 },
-  high: { name: 'HIGH', dprMax: 2.0, dprMin: 1.0, shadows: true, shadowSize: 2048, drawDistance: 250, density: 1, particles: 1, antialias: true, lod: 110 },
+  low: { name: 'LOW', dprMax: 1.25, dprMin: 0.85, shadows: false, shadowSize: 0, drawDistance: 160, density: 0.55, particles: 0.4, antialias: false, lod: 60 },
+  medium: { name: 'MEDIUM', dprMax: 1.75, dprMin: 1.0, shadows: true, shadowSize: 1024, drawDistance: 200, density: 0.8, particles: 0.7, antialias: true, lod: 85 },
+  high: { name: 'HIGH', dprMax: 2.0, dprMin: 1.25, shadows: true, shadowSize: 2048, drawDistance: 250, density: 1, particles: 1, antialias: true, lod: 110 },
 };
 
 export function detectWebGL() {
@@ -61,7 +61,7 @@ export class Renderer {
     r.toneMappingExposure = 1;
     r.shadowMap.enabled = this.profile.shadows;
     r.shadowMap.type = this.profileKey === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
-    setMaxAnisotropy(this.profileKey === 'low' ? 2 : r.capabilities.getMaxAnisotropy());
+    setMaxAnisotropy(this.profileKey === 'low' ? 4 : r.capabilities.getMaxAnisotropy());
     this.dpr = Math.min(window.devicePixelRatio || 1, this.profile.dprMax);
     r.setPixelRatio(this.dpr);
     this.contextLost = false;
@@ -77,7 +77,7 @@ export class Renderer {
       this.listeners.restored.forEach((f) => f());
     }, false);
     // Mesure des performances (AUTO)
-    this.perf = { acc: 0, frames: 0, window: 0, slowStreak: 0, fastStreak: 0, fps: 60, frameMs: 16.7 };
+    this.perf = { acc: 0, frames: 0, window: 0, slowStreak: 0, fastStreak: 0, fps: 60, frameMs: 16.7, warm: 2 };
   }
 
   on(evt, fn) {
@@ -117,6 +117,7 @@ export class Renderer {
   }
 
   applyProfile() {
+    this.perf.warm = 1; // la fenêtre suivante (compilation, rechargement) n'est pas mesurée
     this.renderer.setPixelRatio(this.dpr);
     this.renderer.shadowMap.enabled = this.profile.shadows;
     this.renderer.shadowMap.needsUpdate = true;
@@ -136,20 +137,24 @@ export class Renderer {
     p.frames = 0;
     if (this.qualitySetting !== 'auto' || document.hidden) return;
     const maxDpr = Math.min(window.devicePixelRatio || 1, this.profile.dprMax);
+    if (p.warm > 0) { p.warm--; return; }
     if (p.fps < 45) {
       p.slowStreak++;
       p.fastStreak = 0;
-      if (this.dpr > this.profile.dprMin + 0.01) {
-        this.dpr = Math.max(this.profile.dprMin, this.dpr - 0.15);
-        this.applyProfile();
-      } else if (p.slowStreak >= 2 && this.profile.shadows) {
+      // ordre : ombres d'abord (gros gain, peu visible), puis résolution, puis profil.
+      // La résolution ne descend jamais sous dprMin : l'image ne devient pas pixelisée.
+      if (this.profile.shadows) {
         this.profile.shadows = false;
+        this.applyProfile();
+      } else if (this.dpr > this.profile.dprMin + 0.01) {
+        this.dpr = Math.max(this.profile.dprMin, this.dpr - 0.15);
         this.applyProfile();
       } else if (p.slowStreak >= 3 && this.profileKey !== 'low') {
         this.profileKey = this.profileKey === 'high' ? 'medium' : 'low';
         const keepDpr = this.dpr;
         this.profile = { ...PROFILES[this.profileKey] };
-        this.dpr = Math.min(keepDpr, this.profile.dprMax);
+        this.profile.shadows = false;
+        this.dpr = Math.min(window.devicePixelRatio || 1, Math.max(this.profile.dprMin, Math.min(keepDpr, this.profile.dprMax)));
         p.slowStreak = 0;
         this.applyProfile();
       }

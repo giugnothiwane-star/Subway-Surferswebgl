@@ -128,7 +128,8 @@ Le registre complet des bugs se trouve dans [`BUGS.md`](BUGS.md).
 
 - Un seul chrono (MM:SS.cc), police Orbitron, case arrondie à bord dégradé ; rouge et figé à la chute, repris en grand sur l'écran de fin.
 - Textures du décor refaites en 512 px avec relief : façades, fenêtres, ballast, sols, traverses en bois, toits.
-- Résultat : **35/35 tests Node** et **33/33 vérifications navigateur**.
+- Trains toujours solides (rebond sur le toit si le choc est absorbé), champ de vision borné, résolution minimale relevée.
+- Résultat : **37/37 tests Node** et **34/34 vérifications navigateur**.
 
 ## 3. Ce qui n'a PAS pu être testé ici
 
