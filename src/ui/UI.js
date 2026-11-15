@@ -24,6 +24,11 @@ function h(tag, props = {}, ...children) {
   return el;
 }
 const fmt = (n) => Math.floor(n).toLocaleString('fr-FR');
+const fmtTime = (t) => {
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`;
+};
 // Limite la fréquence d'un traitement coûteux (glisser un sélecteur de couleur
 // déclenche des centaines d'événements) ; la dernière valeur est toujours appliquée.
 function throttle(fn, ms = 150) {
@@ -673,6 +678,14 @@ export class UI {
   }
 
   updateHUD(sim, save) {
+    // chrono de course : s'arrête à la chute (le temps de simulation ne progresse plus)
+    this.setText('h-time', fmtTime(sim.time));
+    if (this.hudCache.dead !== !sim.alive) { this.hudCache.dead = !sim.alive; $('h-time').parentElement.classList.toggle('dead', !sim.alive); }
+    // chrono « pièce » : compte depuis la dernière pièce et se fige un instant quand tu en prends une
+    const frozen = sim.lastCoinAt > 0 && sim.time - sim.lastCoinAt < 0.7;
+    const coinT = frozen ? sim.lastCoinGap : sim.time - sim.lastCoinAt;
+    this.setText('h-cointime', `${coinT.toFixed(1)} s`);
+    if (this.hudCache.frozen !== frozen) { this.hudCache.frozen = frozen; $('h-coinbox').classList.toggle('stopped', frozen); }
     this.setText('h-score', fmt(sim.score));
     this.setText('h-dist', fmt(sim.s));
     this.setText('h-coins', fmt(sim.coins));
@@ -719,6 +732,8 @@ export class UI {
     $('go-dist').textContent = `${fmt(r.distance)} m`;
     $('go-coins').textContent = fmt(r.coins);
     $('go-best').textContent = fmt(r.best);
+    $('go-time').textContent = fmtTime(r.time);
+    $('go-nocoin').textContent = `${(r.longestNoCoin || 0).toFixed(1)} s`;
     $('go-seed').textContent = r.seed;
     const lines = [];
     for (const d of r.finished) lines.push(h('div', { text: `★ Mission réussie : ${d.label} (+${d.reward})` }));
