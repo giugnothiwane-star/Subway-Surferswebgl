@@ -1,7 +1,7 @@
 // Simulation complète d'une course (pure, déterministe, pas fixe).
 // Le rendu lit l'état ; aucune dépendance à Three.js.
 import {
-  COIN, JETPACK, MAGNET_RANGE, MAX_FRAME_DT, PLAYER, SIM_DT, TRAIN, jumpVelocity, laneX, speedAt, DEFAULT_SPEED,
+  COIN, JETPACK, LAVA, MAGNET_RANGE, MAX_FRAME_DT, PLAYER, SIM_DT, TRAIN, jumpVelocity, laneX, speedAt, DEFAULT_SPEED,
 } from './constants.js';
 import { entityBox, groundHeight, laneOfX, rampSolidTop } from './obstacles.js';
 import { TrackGenerator, MAX_LOOKAHEAD } from './TrackGenerator.js';
@@ -17,6 +17,8 @@ export class Simulation {
     this.scoreMult = opts.scoreMult ?? 1;
     this.baseMultiplier = opts.baseMultiplier ?? 1;
     this.zen = !!opts.zen;
+    this.invincible = !!opts.invincible; // option « Invincible » : aucun choc ne termine la partie
+    this.lava = !!opts.lava; // mode « Floor is Lava »
     this.generator = new TrackGenerator({
       seed: opts.seed ?? 1,
       speedProfile: this.speedProfile,
@@ -50,6 +52,7 @@ export class Simulation {
     this.rollQueued = false;
     this.jumpBuffer = 0;
     this.invuln = 0;
+    this.heat = 0; // chaleur de la lave (0 à 1)
     this.stumbles = [];
     this.alive = true;
     this.jet = 'off';
@@ -259,6 +262,8 @@ export class Simulation {
     // Collisions avec les obstacles (test balayé : on compare l'état précédent)
     this.resolveCollisions(solids, prev);
     if (!this.alive) return;
+    if (this.lava) this.updateLava(dt);
+    if (!this.alive) return;
     this.onPlatform = this.onGround && this.y > 0.5;
 
     // Pièces et bonus
@@ -267,6 +272,27 @@ export class Simulation {
     // Génération / recyclage
     this.generator.generateUntil(this.s + MAX_LOOKAHEAD);
     if ((this._pruneTick = (this._pruneTick || 0) + 1) % 30 === 0) this.generator.prune(this.s);
+  }
+
+  // Floor is Lava : rester au sol chauffe, être en l'air ou sur un toit refroidit.
+  // Hoverboard et jetpack protègent. Invincible / Zen : on rebondit hors de la lave.
+  updateLava(dt) {
+    const jet = this.jet === 'rise' || this.jet === 'fly';
+    const onLava = this.onGround && this.y < LAVA.safeHeight && !jet && !this.powerups.active('hoverboard') && this.time > LAVA.grace;
+    this.heat = onLava ? Math.min(1, this.heat + dt / LAVA.burnTime) : Math.max(0, this.heat - dt * LAVA.coolRate);
+    if (this.heat < 1) return;
+    this.heat = 0;
+    if (this.zen || this.invincible || this.powerups.active('shield')) {
+      if (this.powerups.active('shield') && !this.zen && !this.invincible) this.powerups.cancel('shield');
+      this.vy = jumpVelocity(1.2);
+      this.onGround = false;
+      this.rollTime = 0;
+      this.emit('lavaBounce');
+      return;
+    }
+    this.alive = false;
+    this.deathCause = 'lava';
+    this.emit('crash', { cause: 'lava', kind: 'lava' });
   }
 
   land(g) {
@@ -346,7 +372,7 @@ export class Simulation {
     let absorbed = null;
     if (this.powerups.active('shield')) { this.powerups.cancel('shield'); absorbed = 'shieldBreak'; }
     else if (this.powerups.active('hoverboard')) { this.powerups.cancel('hoverboard'); absorbed = 'hoverBreak'; }
-    else if (this.zen) absorbed = 'zenHit';
+    else if (this.zen || this.invincible) absorbed = 'zenHit';
     if (absorbed) {
       this.invuln = PLAYER.invulnAfterHit;
       if (ghost) e.ghost = true;

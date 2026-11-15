@@ -246,6 +246,13 @@ export class UI {
     }));
   }
 
+  syncModeSettings() {
+    const m = MODES.find((x) => x.id === this.save.selected.mode) || MODES[0];
+    $('s-mode').value = m.id;
+    $('s-modedesc').textContent = m.description + (this.save.settings.invincible ? ' Option Invincible active : aucun choc ne termine la partie.' : '');
+    $('s-invincible').checked = !!this.save.settings.invincible;
+  }
+
   renderModes() {
     const box = $('modes');
     box.replaceChildren(...MODES.map((m) => h('button', {
@@ -254,7 +261,7 @@ export class UI {
       'aria-checked': this.save.selected.mode === m.id ? 'true' : 'false',
       title: m.description,
       text: m.name,
-      onclick: () => { this.click(); this.save.selected.mode = m.id; this.storage.save(); this.renderModes(); this.toast(`${m.name} : ${m.description}`); },
+      onclick: () => { this.click(); this.save.selected.mode = m.id; this.storage.save(); this.renderModes(); this.syncModeSettings(); this.toast(`${m.name} : ${m.description}`); },
     })));
   }
 
@@ -353,6 +360,7 @@ export class UI {
     $('s-sfx').value = st.sfx;
     $('s-mute').checked = st.muted;
     $('s-autopilot').checked = !!this.game.autopilot;
+    this.syncModeSettings();
     if (this.save.lastSeed && !$('s-seed').value) $('s-seed').value = this.save.lastSeed;
     const i = this.game.r.info();
     $('s-perf').textContent = `Profil actif : ${i.profile} · résolution ×${i.dpr.toFixed(2)} · ${i.fps.toFixed(0)} FPS mesurés · ${i.calls} draw calls`;
@@ -399,6 +407,10 @@ export class UI {
     for (const k of ['master', 'music', 'sfx']) $(`s-${k}`).addEventListener('input', (e) => { st()[k] = Number(e.target.value); this.audio.setVolumes(st()); persist(); });
     $('s-mute').addEventListener('change', (e) => { st().muted = e.target.checked; this.audio.setVolumes(st()); persist(); });
     $('s-autopilot').addEventListener('change', (e) => { this.game.autopilot = e.target.checked; });
+    // Mode de jeu (même réglage que le sélecteur du menu) + option Invincible
+    $('s-mode').replaceChildren(...MODES.map((m) => h('option', { value: m.id, text: m.name })));
+    $('s-mode').addEventListener('change', (e) => { this.save.selected.mode = e.target.value; this.storage.save(); this.syncModeSettings(); this.renderModes(); });
+    $('s-invincible').addEventListener('change', (e) => { this.save.settings.invincible = e.target.checked; this.storage.save(); this.syncModeSettings(); });
     $('s-seedplay').addEventListener('click', () => {
       const v = $('s-seed').value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
       if (!v) return this.toast('Entre une graine (lettres et chiffres).', 'warn');
@@ -1012,6 +1024,11 @@ export class UI {
       box.classList.remove('flash');
       if (!sim.alive) { void box.offsetWidth; box.classList.add('flash'); }
     }
+    if (this.hudCache.lava !== !!sim.lava) { this.hudCache.lava = !!sim.lava; $('h-lava').classList.toggle('hidden', !sim.lava); }
+    if (sim.lava) {
+      const pct = Math.round((sim.heat || 0) * 100);
+      if (this.hudCache.heat !== pct) { this.hudCache.heat = pct; $('h-lavafill').style.width = `${pct}%`; $('h-lava').classList.toggle('hot', pct > 60); }
+    }
     this.setText('h-score', fmt(sim.score));
     this.setText('h-dist', fmt(sim.s));
     this.setText('h-coins', fmt(sim.coins));
@@ -1051,7 +1068,7 @@ export class UI {
   }
 
   showGameOver(r) {
-    $('go-cause').textContent = r.zen ? 'ZEN RUN' : { front: 'TU AS PERCUTÉ UN TRAIN', barrierLow: 'BARRIÈRE BASSE : IL FALLAIT SAUTER', barrierHigh: 'BARRIÈRE HAUTE : IL FALLAIT ROULER', stumble: 'DEUX TRÉBUCHEMENTS DE SUITE' }[r.cause] || 'FIN DE PARTIE';
+    $('go-cause').textContent = r.zen ? 'PARTIE SANS RECORD (ZEN / ENTRAÎNEMENT / INVINCIBLE)' : { front: 'TU AS PERCUTÉ UN TRAIN', barrierLow: 'BARRIÈRE BASSE : IL FALLAIT SAUTER', barrierHigh: 'BARRIÈRE HAUTE : IL FALLAIT ROULER', stumble: 'DEUX TRÉBUCHEMENTS DE SUITE', lava: 'LA LAVE T\'A BRÛLÉ' }[r.cause] || 'FIN DE PARTIE';
     $('go-title').textContent = r.newRecord ? 'Record battu !' : r.distance > 1000 ? 'Superbe course !' : 'Belle course !';
     $('go-record').classList.toggle('hidden', !r.newRecord);
     $('go-score').textContent = fmt(r.score);

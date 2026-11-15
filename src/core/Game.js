@@ -6,7 +6,7 @@ import { Renderer } from './Renderer.js';
 import { CameraRig } from './CameraRig.js';
 import { Simulation } from '../gameplay/Simulation.js';
 import { Bot } from '../gameplay/Bot.js';
-import { DEFAULT_SPEED, POWERUP_TYPES } from '../gameplay/constants.js';
+import { DEFAULT_SPEED, POWERUP_TYPES, TRAINING_SPEED } from '../gameplay/constants.js';
 import { groundHeight } from '../gameplay/obstacles.js';
 import { randomSeed } from '../gameplay/rng.js';
 import { Environment } from '../world/Environment.js';
@@ -88,6 +88,10 @@ export class Game {
   version() {
     return VERSIONS.find((v) => v.id === this.save.selected.version) || VERSIONS.find((v) => v.id === 'ultimate');
   }
+  noRecord() {
+    return !!this.mode().zen || !!this.save.settings.invincible;
+  }
+
   mode() {
     return MODES.find((m) => m.id === this.save.selected.mode) || MODES[0];
   }
@@ -202,13 +206,15 @@ export class Game {
     this.missionBase = snapshotBase(this.save.missions);
     this.sim = new Simulation({
       seed: this.seed,
-      speedProfile: v.speed || DEFAULT_SPEED,
+      speedProfile: mode.training ? TRAINING_SPEED : v.speed || DEFAULT_SPEED,
       speedMult: mode.speedMult,
       scoreMult: mode.scoreMult,
       zen: !!mode.zen,
+      invincible: !!this.save.settings.invincible,
+      lava: !!mode.lava,
       powerups: v.powerups || POWERUP_TYPES,
       features: v.features,
-      density: v.density || 1,
+      density: (v.density || 1) * (mode.training ? 0.7 : 1),
       trainVariants: this.map.trains.variants,
       baseMultiplier: this.save.missions.level,
       canUseBoard: () => this.save.hoverboards > 0,
@@ -217,6 +223,7 @@ export class Game {
     this.particles.clear();
     this.player.reset();
     this.bot = this.autopilot ? new Bot(this.sim) : null;
+    this.env?.setLava(!!mode.lava);
     this.finishedMissions = [];
     this.deathTimer = 0;
     this.slowMo = 0;
@@ -244,6 +251,13 @@ export class Game {
       return;
     }
     if (this.state !== 'playing' || !this.sim) return;
+    // une commande du joueur reprend la main sur le pilote automatique
+    // (sinon il ramenait le personnage sur sa voie à chaque changement)
+    if (this.autopilot && this.bot && action !== 'board') {
+      this.autopilot = false;
+      this.bot = null;
+      this.ui.toast('Pilote automatique désactivé : tu as repris la main.');
+    }
     this.sim.input(action);
   }
 
@@ -285,6 +299,7 @@ export class Game {
     this.sim = null;
     this.entities.clear();
     this.player.reset();
+    this.env?.setLava(false);
     this.audio.duck(false);
     this.audio.startMusic('menu', this.map.music);
     this.ui.showScreen('menu');
@@ -293,7 +308,8 @@ export class Game {
   endRun() {
     const sim = this.sim;
     const sum = sim.summary();
-    const zen = !!this.mode().zen;
+    // pas de record en Zen, Entraînement ou Invincible (on ne peut pas perdre)
+    const zen = this.noRecord();
     const newRecord = !zen && this.save.best > 0 && sum.score > this.save.best;
     const firstRecord = !zen && sum.score > this.save.best;
     const run = { ...sum, newRecord };
@@ -364,6 +380,7 @@ export class Game {
       case 'hoverBreak': a.play('hoverBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 0.3, pp.z, { count: 26, speed: 5, color: 0x65d9ff, size: 0.35, life: 0.6 }); break;
       case 'shieldBreak': a.play('shieldBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 1, pp.z, { count: 30, speed: 6, color: 0x59c8ff, size: 0.35, life: 0.6 }); break;
       case 'zenHit': a.play('stumble'); this.rig.addShake(0.4); break;
+      case 'lavaBounce': a.play('stumble'); this.rig.addShake(0.3); this.particles.emit(pp.x, pp.y + 0.1, pp.z, { count: 22, speed: 3.5, up: 2, color: 0xff6a1a, size: 0.35, life: 0.6, gravity: -6 }); break;
       case 'vault': a.play('jump'); this.rig.addShake(0.35); this.fx.landing({ x: pp.x, y: e.height ?? pp.y, z: pp.z }, 1.3); this.particles.emit(pp.x, pp.y, pp.z, { count: 16, speed: 3.5, color: 0xffffff, size: 0.3, life: 0.45 }); break;
     }
   }
@@ -406,7 +423,7 @@ export class Game {
           for (const e of sim.drainEvents()) this.onSimEvent(e);
           if ((this._mt = (this._mt || 0) + dt) > 0.5) {
             this._mt = 0;
-            const done = trackRun(this.runMissions, { ...sim.summary(), newRecord: !this.mode().zen && this.save.best > 0 && sim.score > this.save.best }, this.missionBase);
+            const done = trackRun(this.runMissions, { ...sim.summary(), newRecord: !this.noRecord() && this.save.best > 0 && sim.score > this.save.best }, this.missionBase);
             for (const d of done) {
               this.finishedMissions.push(d);
               this.audio.play('mission');
@@ -457,6 +474,10 @@ export class Game {
   }
 
   emitTrails(sim) {
+    if (sim.lava && sim.alive && Math.random() < (sim.heat > 0.05 ? 0.9 : 0.25)) {
+      const p = this.player.group.position;
+      this.particles.emit(p.x + (Math.random() - 0.5) * 3, 0.05, p.z - Math.random() * 6, { count: 1, speed: 0.6, up: 2.2, color: sim.heat > 0.5 ? 0xffd23a : 0xff5a1a, size: 0.25, life: 0.7, gravity: -1 });
+    }
     const jet = sim.jet === 'rise' || sim.jet === 'fly';
     if (jet && Math.random() < 0.9) {
       this.player.worldOf('jet', _v);

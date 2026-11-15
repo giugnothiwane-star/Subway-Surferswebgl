@@ -336,3 +336,10 @@ code { background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; 
 .sharechoice { margin: 8px 0; padding: 10px; border-radius: 14px; border: 1px solid var(--lime); background: rgba(184,244,119,.08); }
 .sharechoice p { margin: 0 0 6px; }
 .owner-ok { color: var(--lime); }
+
+/* Floor is Lava : jauge de chaleur */
+.lavabar { display: flex; align-items: center; gap: 8px; margin-top: 8px; width: min(210px, 52vw); padding: 5px 9px; border-radius: 12px; background: rgba(40,8,0,.7); border: 1px solid rgba(255,106,26,.6); font-size: 12px; font-weight: 900; color: #ffd2a6; }
+.lavabar i { flex: 1; height: 7px; border-radius: 7px; background: rgba(255,255,255,.12); overflow: hidden; }
+.lavabar b { display: block; height: 100%; width: 0; border-radius: 7px; background: linear-gradient(90deg, #ffd23a, #ff6a1a, #ff2a2a); transition: width .08s linear; }
+.lavabar.hot { animation: lavaHot .25s ease-in-out infinite alternate; }
+@keyframes lavaHot { to { box-shadow: 0 0 14px rgba(255,80,20,.9); } }

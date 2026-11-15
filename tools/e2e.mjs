@@ -490,6 +490,41 @@ await check('Propriétaire : mauvais code refusé ; image « pour tout le monde 
   }
 });
 
+await check('Modes : Floor is Lava, Entraînement, option Invincible ; reprise en main du pilote automatique', async () => {
+  // 1. réglages : mode Floor is Lava choisi dans les Paramètres
+  await page.click('[data-nav="settings"]');
+  await page.selectOption('#s-mode', 'lava');
+  const desc = await page.textContent('#s-modedesc');
+  await page.click('#settings [data-nav="back"]');
+  await game(() => { const g = window.__MNNROW.game; g.autopilot = false; g.startRun('LAVA1'); });
+  await wait(800);
+  const lava = await game(() => { const g = window.__MNNROW.game; return { on: g.sim.lava, hud: !document.getElementById('h-lava').classList.contains('hidden'), glow: g.env.lavaOn && !!g.env.bedMat.emissiveMap }; });
+  await page.screenshot({ path: `${OUT}/25-floor-is-lava.png` });
+  // au sol sans sauter : la lave termine la partie (avance directe de la simulation)
+  const burned = await game(() => { const g = window.__MNNROW.game; let n = 0; while (g.sim.alive && n++ < 2000) g.sim.step(1 / 120); return { alive: g.sim.alive, cause: g.sim.deathCause }; });
+  await game(() => window.__MNNROW.game.quitToMenu());
+  // 2. option Invincible : même situation, on survit
+  await game(() => { const g = window.__MNNROW.game; g.save.settings.invincible = true; g.startRun('LAVA2'); });
+  const inv = await game(() => { const g = window.__MNNROW.game; let n = 0; while (g.sim.alive && n++ < 2000) g.sim.step(1 / 120); return { alive: g.sim.alive, invincible: g.sim.invincible }; });
+  await game(() => { const g = window.__MNNROW.game; g.quitToMenu(); g.save.settings.invincible = false; g.save.selected.mode = 'training'; g.startRun('TRAIN1'); });
+  const training = await game(() => { const g = window.__MNNROW.game; return { v: g.sim.v, zen: g.sim.zen, lava: g.env.lavaOn }; });
+  await game(() => window.__MNNROW.game.quitToMenu());
+  // 3. pilote automatique : une commande du joueur reprend la main
+  await game(() => { const g = window.__MNNROW.game; g.save.selected.mode = 'standard'; g.autopilot = true; g.startRun('AUTO1'); });
+  await wait(600);
+  await page.keyboard.press('ArrowLeft');
+  await wait(400);
+  const auto = await game(() => { const g = window.__MNNROW.game; return { autopilot: g.autopilot, bot: !!g.bot, lane: g.sim.targetLane }; });
+  await game(() => { window.__MNNROW.game.quitToMenu(); });
+  assert(/lave/i.test(desc), desc);
+  assert(lava.on && lava.hud && lava.glow, JSON.stringify(lava));
+  assert(!burned.alive && burned.cause === 'lava', JSON.stringify(burned));
+  assert(inv.alive && inv.invincible, JSON.stringify(inv));
+  assert(training.zen && training.v < 12 && !training.lava, JSON.stringify(training));
+  assert(!auto.autopilot && !auto.bot && auto.lane === -1, JSON.stringify(auto));
+  return `lave : jauge + sol rougeoyant, brûlé au sol ; invincible : survit ; entraînement ${training.v.toFixed(1)} m/s ; pilote coupé par la commande du joueur`;
+});
+
 await check('19. Redimensionnement / orientation paysage', async () => {
   await page.setViewportSize({ width: 915, height: 412 });
   await wait(700);

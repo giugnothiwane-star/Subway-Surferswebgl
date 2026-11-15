@@ -1193,3 +1193,37 @@ export function fabricTexture(kind) {
     }
   }, { repeat: true });
 }
+
+// Floor is Lava : roche sombre parcourue de fissures incandescentes (carte d'émission).
+export function lavaTexture() {
+  return makeTexture('lava', 512, 512, (ctx, w, h) => {
+    const r = rng(9091);
+    ctx.fillStyle = '#120402';
+    ctx.fillRect(0, 0, w, h);
+    // flaques de magma diffuses
+    for (let i = 0; i < 26; i++) {
+      const x = r() * w, y = r() * h, rad = 30 + r() * 70;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, 'rgba(255,90,10,0.55)');
+      g.addColorStop(1, 'rgba(120,20,0,0)');
+      ctx.fillStyle = g;
+      wrapEach(w, h, x, y, rad, (px, py) => { ctx.save(); ctx.translate(px - x, py - y); ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2); ctx.restore(); });
+    }
+    // fissures : traits brillants avec halo
+    ctx.lineCap = 'round';
+    for (let k = 0; k < 34; k++) {
+      let x = r() * w, y = r() * h;
+      const pts = [[x, y]];
+      for (let s = 0; s < 9; s++) { x += (r() - 0.5) * 60; y += (r() - 0.5) * 60; pts.push([x, y]); }
+      for (const [width, col] of [[9, 'rgba(255,60,0,0.35)'], [4, 'rgba(255,140,20,0.9)'], [1.6, 'rgba(255,240,170,1)']]) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = width;
+        for (const dx of [0, -w, w]) for (const dy of [0, -h, h]) {
+          ctx.beginPath();
+          pts.forEach(([px, py], i) => (i ? ctx.lineTo(px + dx, py + dy) : ctx.moveTo(px + dx, py + dy)));
+          ctx.stroke();
+        }
+      }
+    }
+  }, { repeat: true });
+}

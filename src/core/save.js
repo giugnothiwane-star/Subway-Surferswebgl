@@ -23,7 +23,7 @@ export function defaultSave() {
     missions: { level: 1, active: [], completedTotal: 0 },
     settings: {
       quality: 'auto', shadows: null, reducedMotion: false, touchButtons: true, showFps: false,
-      master: 0.8, music: 0.6, sfx: 0.8, muted: false, swipeSensitivity: 1, vibrate: true, autoFullscreen: false, saturation: 1, keys: cloneDefaults(),
+      master: 0.8, music: 0.6, sfx: 0.8, muted: false, swipeSensitivity: 1, vibrate: true, autoFullscreen: false, saturation: 1, invincible: false, keys: cloneDefaults(),
     },
     studio: {
       coinTint: null,
@@ -71,7 +71,7 @@ export function validateSave(input) {
     out.selected.board = out.unlocked.boards.includes(s.board) ? s.board : 'classic';
     out.selected.map = oneOf(s.map, MAPS.map((m) => m.id), 'metro');
     out.selected.version = oneOf(s.version, VERSIONS.filter((v) => !v.disabled).map((v) => v.id), 'ultimate');
-    out.selected.mode = oneOf(s.mode, ['standard', 'speed', 'zen'], 'standard');
+    out.selected.mode = oneOf(s.mode, ['standard', 'training', 'lava', 'speed', 'zen'], 'standard');
   }
   if (isObj(input.look)) {
     const L = {};
@@ -102,6 +102,7 @@ export function validateSave(input) {
     o.quality = oneOf(s.quality, ['auto', 'low', 'medium', 'high'], 'auto');
     o.shadows = s.shadows === null || typeof s.shadows === 'boolean' ? s.shadows : null;
     o.reducedMotion = bool(s.reducedMotion, false);
+    o.invincible = bool(s.invincible, false);
     o.touchButtons = bool(s.touchButtons, true);
     o.showFps = bool(s.showFps, false);
     o.master = num(s.master, 0.8, 0, 1);

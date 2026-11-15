@@ -197,6 +197,22 @@ téléphone : la vérification à 60 FPS reste à faire sur un appareil réel.
 - GitHub est **simulé** dans ces tests : la vraie publication n'a pas pu être essayée ici (pas de jeton,
   et le réseau de cet environnement bloque github.io / l'API d'écriture).
 
+### Modes Entraînement / Floor is Lava / Invincible (15 novembre 2026)
+
+- **51/51 tests Node**, dont 5 nouveaux :
+  - la lave brûle après la période de grâce + 1,1 s au sol ;
+  - des sauts répétés protègent ;
+  - avec l'option Invincible, on rebondit hors de la lave ;
+  - en Invincible, aucun obstacle ne termine la partie ;
+  - le pilote automatique survit 600 m sur la lave ;
+  - les sauvegardes sont validées.
+- **36/36 vérifications navigateur**. La nouvelle vérifie :
+  - le choix du mode dans les Paramètres ;
+  - en lave : jauge, sol rougeoyant, brûlure au sol ;
+  - l'option Invincible ;
+  - la vitesse d'entraînement (11 m/s) ;
+  - la reprise en main du pilote automatique.
+
 ## 3. Ce qui n'a PAS pu être testé ici
 
 - **Téléphone Android réel** : performances, chaleur, gestes, Samsung Internet. Aucun appareil disponible.

@@ -40,6 +40,8 @@ Tests mentionnés : `npm test` (tests Node) et `node tools/e2e.mjs` (navigateur 
 | B30 | Basse | Pièces brun foncé sur la carte néon avec les reflets du ciel nocturne | Captures (remaster) | Confirmée | `src/models/Props.js`, `src/skins/CoinFactory.js` | Reflets neutres dédiés aux objets à ramasser ; ciel de nuit neutralisé dans la carte de reflets | Captures | Corrigé |
 | B31 | Basse | Captures automatiques faussées : la transition menu → course était encore en cours après une avance rapide | Captures avant | Confirmée (outil de test) | `tools/compare-shots.mjs` | Transition coupée avant la capture | Captures | Corrigé |
 | B32 | Haute | Déploiement bloqué : 4 tests navigateur en échec sur la machine de GitHub (import d'image > 10 s, puis studio resté ouvert pour les tests suivants ; FOV mesuré en pleine transition) | CI de la fusion #6 | Confirmée (journal Actions) | `tools/e2e.mjs` | Délais de 30 s, retour au menu garanti, galerie vidée au début du test, FOV cible mesuré | e2e local + CI | Corrigé |
+| B33 | Moyenne | « Je peux sauter mais pas tourner : ça me ramène sur la voie du milieu » | Retour joueur | 2 causes trouvées : (1) le pilote automatique (Paramètres) ramenait le joueur sur sa voie ; (2) un trébuchement contre le flanc d'un train renvoyait le joueur sur sa voie d'un coup | `src/core/Game.js`, `src/world/PlayerView.js` | (1) toute commande du joueur coupe le pilote automatique ; (2) recul du trébuchement montré en douceur (0,18 s) | e2e Modes | Corrigé |
+| B34 | Moyenne | Test du chrono dépendant de la vitesse de la machine de test (publication bloquée) | CI de la PR #9 | Confirmée | `tools/e2e.mjs` | Simulation avancée directement jusqu'à la collision | CI | Corrigé |
 
 ## Nouvelles fonctions vérifiées
 

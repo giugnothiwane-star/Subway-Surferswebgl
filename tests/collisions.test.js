@@ -215,3 +215,44 @@ test('train mobile de face avec hoverboard : rebond sur le toit puis fin du wago
   assert.equal(sim.alive, true);
   assert.ok(maxY >= TRAIN.height, `hauteur max ${maxY}`);
 });
+
+test('Floor is Lava : rester au sol brûle, sauter sans arrêt ou être invincible protège', async () => {
+  const { LAVA } = await import('../src/gameplay/constants.js');
+  // au sol, sans rien faire : fin de partie « lava » juste après la période de grâce
+  const a = scenario([], { lava: true });
+  runUntil(a, 400);
+  assert.equal(a.alive, false);
+  assert.equal(a.deathCause, 'lava');
+  assert.ok(a.time > LAVA.grace + LAVA.burnTime - 0.05 && a.time < LAVA.grace + LAVA.burnTime + 0.2, `brûlé à ${a.time.toFixed(2)} s`);
+  // sauts répétés : jamais brûlé
+  const b = scenario([], { lava: true });
+  runUntil(b, 400, (sim) => { if (sim.onGround) sim.input('jump'); });
+  assert.equal(b.alive, true);
+  assert.ok(b.heat < 0.6);
+  // invincible : on rebondit hors de la lave
+  const c = scenario([], { lava: true, invincible: true });
+  runUntil(c, 400);
+  assert.equal(c.alive, true);
+  assert.ok(events(c).includes('lavaBounce'));
+});
+
+test('option Invincible : aucun obstacle ne termine la partie (trains : rebond sur le toit)', () => {
+  const sim = scenario([
+    { kind: 'barrier', type: 'low', lane: 0, s: 30 },
+    { kind: 'barrier', type: 'high', lane: 0, s: 60 },
+    { kind: 'train', lane: 0, s: 100, length: 28, cars: 2, moving: false, k: 0 },
+  ], { invincible: true });
+  runUntil(sim, 160);
+  assert.equal(sim.alive, true);
+  assert.ok(events(sim).includes('vault'));
+});
+
+test('pilote automatique en Floor is Lava : saute à temps et survit', async () => {
+  const { Simulation } = await import('../src/gameplay/Simulation.js');
+  const { Bot } = await import('../src/gameplay/Bot.js');
+  const sim = new Simulation({ seed: 7, lava: true });
+  const bot = new Bot(sim);
+  let n = 0;
+  while (sim.alive && sim.s < 600 && n++ < 200000) { bot.update(); sim.step(SIM_DT); }
+  assert.equal(sim.deathCause === 'lava', false, `brûlé à ${sim.s.toFixed(0)} m`);
+});

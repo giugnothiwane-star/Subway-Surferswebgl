@@ -73,6 +73,10 @@ export function speedAt(s, profile = DEFAULT_SPEED) {
 }
 
 export const DEFAULT_SPEED = { v0: 14, vMax: 30, rampDistance: 3200 };
+// Entraînement : vitesse lente et constante.
+export const TRAINING_SPEED = { v0: 11, vMax: 11, rampDistance: 3200 };
+// Floor is Lava : temps maximal au sol (s) avant de brûler ; refroidissement en l'air / sur un toit.
+export const LAVA = { burnTime: 1.1, coolRate: 1.6, grace: 2.5, safeHeight: 0.3 };
 
 export function jumpVelocity(height, gravity = PLAYER.gravity) {
   return Math.sqrt(2 * gravity * height);

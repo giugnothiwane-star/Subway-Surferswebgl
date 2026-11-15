@@ -10,6 +10,8 @@ export class Bot {
   update() {
     const sim = this.sim;
     if (!sim.alive) return;
+    // Floor is Lava : saute dès que le sol devient trop chaud
+    if (sim.lava && sim.onGround && sim.heat > 0.35) sim.input('jump');
     const path = sim.generator.path;
     let w = null;
     for (const p of path) {
