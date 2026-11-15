@@ -13,10 +13,12 @@ import { Environment } from '../world/Environment.js';
 import { EntityRenderer } from '../world/EntityRenderer.js';
 import { PlayerView } from '../world/PlayerView.js';
 import { ParticleSystem } from '../world/Particles.js';
+import { RunEffects } from '../world/Effects.js';
 import { getMap } from '../data/maps.js';
 import { BOARDS, CHARACTERS, MODES, VERSIONS } from '../data/catalog.js';
 import { claim, commitRun, ensureMissions, snapshotBase, trackRun } from '../gameplay/Missions.js';
 import { buildTrain } from '../models/Trains.js';
+import { setPickupEnvironment } from '../models/Props.js';
 import { SkinManager } from '../skins/SkinManager.js';
 import { buildCoinPreview } from '../skins/CoinFactory.js';
 import { setSkinMotion, setSkinQuality, updateSkins } from '../skins/SkinShader.js';
@@ -39,6 +41,8 @@ export class Game {
     this.particles = new ParticleSystem(700);
     this.particles.scale = this.r.profile.particles;
     this.scene.add(this.particles.points);
+    this.fx = new RunEffects(this.scene);
+    this.fx.setProfile(this.r.profile);
     this.custom = {};
     this.clock = { last: performance.now() };
     this.time = 0;
@@ -55,6 +59,7 @@ export class Game {
       this.env?.setProfile(p);
       this.entities?.setProfile(p);
       this.particles.scale = p.particles;
+      this.fx.setProfile(p);
     });
     window.addEventListener('resize', () => this.resize());
     window.visualViewport?.addEventListener('resize', () => this.resize());
@@ -96,6 +101,7 @@ export class Game {
     this.entities?.dispose();
     this.map = map;
     this.env = new Environment(this.scene, this.r, map, this.r.profile);
+    setPickupEnvironment(this.r.environment());
     this.entities = new EntityRenderer(this.scene, map, this.r.profile, this.entityCustom());
     this.env.setLighting(this.save.studio.lighting);
     this.menuSim = new Simulation({ seed: 'menu', powerups: [] });
@@ -312,7 +318,7 @@ export class Game {
       case 'bump': this.rig.addShake(0.15); break;
       case 'land':
         a.play('land');
-        if (e.hard) { this.dust(pp); this.rig.addShake(0.12); }
+        if (e.hard) { this.dust(pp); this.rig.addShake(0.12); this.fx.landing(pp, 1); }
         break;
       case 'stumble': a.play('stumble'); this.ui.vibrate(40); this.rig.addShake(0.5); this.ui.toast('Attention !', 'warn'); break;
       case 'crash':
@@ -342,7 +348,7 @@ export class Game {
       case 'hoverBreak': a.play('hoverBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 0.3, pp.z, { count: 26, speed: 5, color: 0x65d9ff, size: 0.35, life: 0.6 }); break;
       case 'shieldBreak': a.play('shieldBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 1, pp.z, { count: 30, speed: 6, color: 0x59c8ff, size: 0.35, life: 0.6 }); break;
       case 'zenHit': a.play('stumble'); this.rig.addShake(0.4); break;
-      case 'vault': a.play('jump'); this.rig.addShake(0.35); this.particles.emit(pp.x, pp.y, pp.z, { count: 16, speed: 3.5, color: 0xffffff, size: 0.3, life: 0.45 }); break;
+      case 'vault': a.play('jump'); this.rig.addShake(0.35); this.fx.landing({ x: pp.x, y: e.height ?? pp.y, z: pp.z }, 1.3); this.particles.emit(pp.x, pp.y, pp.z, { count: 16, speed: 3.5, color: 0xffffff, size: 0.3, life: 0.45 }); break;
     }
   }
 
@@ -410,6 +416,7 @@ export class Game {
         else this.player.mixer.update(dt);
         this.entities.update(dt, sim, this.time);
         this.particles.update(dt);
+        this.fx.update(dt, sim, this.player.group.position, this.rig.camera, this.player.board?.userData.materials?.glow?.color);
       }
       this.env.update(st === 'paused' ? 0 : dt, sim.s, this.rig.camera, sim.generator.zones, this.player.group.position, sim.v);
       if (st !== 'paused') this.rig.updateGame(dt, sim, sim.generator.zones);
@@ -422,6 +429,7 @@ export class Game {
       this.env.update(dt, 0, this.rig.camera, ms.generator.zones, this.player.group.position, 0);
       this.entities.clear();
       this.particles.update(dt);
+      this.fx.hide();
       if (this.state === 'studio' && this.orbit) {
         this.orbit.update();
         if (this.studioSpin && this.studioObject) this.studioObject.rotation.y += dt * 0.6;
@@ -491,10 +499,13 @@ export class Game {
       target.set(0, 1.1, 0);
       dist = this.rig.aspect < 0.8 ? 6.5 : 5;
     } else if (subject === 'train') {
+      // aperçu : le modèle choisi (métro, rame moderne, marchandises), 2 voitures
+      const style = this.studioTrainStyle || 'urban';
       const l = this.save.studio.trainLivery;
-      const base = (this.map.trains.liveries.urban || Object.values(this.map.trains.liveries)[0])[0];
+      const pool = this.map.trains.liveries[style] || this.map.trains.liveries.urban || Object.values(this.map.trains.liveries)[0];
+      const base = pool[0];
       const livery = l.enabled ? { ...base, body: l.body, stripe: l.stripe, accent: l.accent, customTexture: this.custom.trainTexture || undefined } : base;
-      const t = buildTrain('urban', livery, 1);
+      const t = buildTrain(style, livery, style === 'freight' ? 3 : 2);
       t.traverse((o) => { if (o.isMesh) o.userData.ownGeometry = true; });
       t.position.set(3, 0, 6);
       this.studioObject = t;
@@ -512,6 +523,12 @@ export class Game {
     this.rig.camera.fov = 45;
     this.rig.camera.updateProjectionMatrix();
     this.studioSpin = subject === 'coin';
+  }
+
+  setStudioTrainStyle(style) {
+    if (!['urban', 'modern', 'freight'].includes(style)) return;
+    this.studioTrainStyle = style;
+    if (this.state === 'studio') this.setStudioSubject('train');
   }
 
   exitStudio() {

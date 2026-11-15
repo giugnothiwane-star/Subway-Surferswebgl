@@ -8,6 +8,23 @@ import { BARRIER, RAMP, TRAIN } from '../gameplay/constants.js';
 
 const mats = {};
 export const sharedMaterials = new Set();
+
+// Objets à ramasser (pièces, bonus, accessoires du joueur) : reflets d'un studio
+// neutre, pour que l'or reste doré et lisible sur toutes les cartes (le ciel
+// violet de la ville néon les rendait brun foncé).
+let pickupEnv = null;
+const PICKUP = /^(Gold|CoinEdge|Coin_|CoinFace|Magnet|Jet|Sneak|Shield|Mult)/;
+export function setPickupEnvironment(tex) {
+  pickupEnv = tex;
+  for (const m of sharedMaterials) {
+    if (!PICKUP.test(m.name) || m.envMap === tex) continue;
+    m.envMap = tex;
+    m.needsUpdate = true;
+  }
+}
+export function pickupEnvironment() {
+  return pickupEnv;
+}
 export function mat(name, params, Type = THREE.MeshStandardMaterial) {
   if (!mats[name]) {
     mats[name] = new Type(params);
@@ -464,16 +481,28 @@ export function stationGeo(roof = 0xd94f3a, floor = 0xbfb6a8) {
 export function tunnelGeo(color = 0x5a5f69, ring = 0xffc23d) {
   const pb = new PartBuilder();
   const wall = mat(`TunnelWall_${color}`, { color, roughness: 0.9, side: THREE.DoubleSide });
+  const rib = mat(`TunnelRib_${color}`, { color: new THREE.Color(color).multiplyScalar(0.8), roughness: 0.85 });
   const ringM = mat(`TunnelRing_${ring}`, { color: ring, roughness: 0.6 });
   const light = mat('TunnelLight', { color: 0xfff1c1, emissive: 0xfff1c1, emissiveIntensity: 1.8 });
+  const strip = mat('TunnelStrip', { color: 0xbfe8ff, emissive: 0x9fdcff, emissiveIntensity: 1.4 });
+  const cable = mat('TunnelCable', { color: 0x1d1f24, roughness: 0.7 });
+  const exitSign = mat('TunnelExit', { color: 0x2fe07a, emissive: 0x2fe07a, emissiveIntensity: 1.2 });
   const arch = new THREE.CylinderGeometry(5.6, 5.6, 10, 24, 1, true, -Math.PI / 2, Math.PI);
   arch.rotateX(-Math.PI / 2); // demi-cylindre supérieur, axe le long de z
   pb.add(arch, wall, { position: [0, 2.4, -5], scale: [1, 1.0, 1] });
   pb.add(new THREE.TorusGeometry(5.6, 0.25, 6, 24, Math.PI), ringM, { position: [0, 2.4, 0] });
+  // voussoirs (anneaux de béton) tous les 5 m
+  pb.add(new THREE.TorusGeometry(5.5, 0.12, 5, 24, Math.PI), rib, { position: [0, 2.4, -5] });
   for (const sx of [-1, 1]) {
     pb.add(new THREE.BoxGeometry(0.4, 2.4, 10), wall, { position: [sx * 5.4, 1.2, -5] });
     pb.add(new THREE.BoxGeometry(0.15, 0.15, 1.2), light, { position: [sx * 4.2, 5.6, -5] });
+    // rampe lumineuse continue + chemins de câbles
+    pb.add(new THREE.BoxGeometry(0.06, 0.08, 9.6), strip, { position: [sx * 5.17, 2.25, -5] });
+    for (const y of [1.4, 1.6, 1.8]) pb.add(new THREE.CylinderGeometry(0.035, 0.035, 10, 5), cable, { position: [sx * 5.15, y, -5], rotation: [Math.PI / 2, 0, 0] });
+    for (const z of [-1.5, -6.5]) pb.add(new THREE.BoxGeometry(0.2, 0.5, 0.06), cable, { position: [sx * 5.15, 1.6, z] });
   }
+  // signalisation de sortie de secours
+  pb.add(new THREE.BoxGeometry(0.05, 0.22, 0.5), exitSign, { position: [5.16, 2.75, -7.5] });
   return pb.buildGrouped();
 }
 

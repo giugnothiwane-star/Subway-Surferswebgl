@@ -285,6 +285,11 @@ export class EntityRenderer {
       const o = v.obj;
       if (e.kind === 'train') {
         o.position.set(laneX(e.lane), 0, -s0);
+        if (e.moving) {
+          // légère vibration de roulement (visuelle seulement, la collision ne bouge pas)
+          o.position.y = Math.sin(time * 31 + e.id) * 0.012 + Math.sin(time * 13 + e.id * 2) * 0.008;
+          o.rotation.z = Math.sin(time * 17 + e.id) * 0.0035;
+        }
         if (v.flare) {
           // pulsation + grossissement avec la distance pour rester visible
           const d = Math.max(0, s0 - s);
@@ -301,9 +306,13 @@ export class EntityRenderer {
         ring.position.y = -e.y + 0.05 - bob - 0.1 + (e.y > 2 ? 3.0 : 0);
         ring.scale.setScalar(1 + Math.sin(time * 4) * 0.08);
         if (e.collected) {
-          const k = Math.min(1, (sim.time - e.collectedAt) / 0.35);
-          o.scale.setScalar(1 + k * 0.8);
-          o.position.y += k * 1.5;
+          // aspiré vers le joueur en rétrécissant (ne masque plus le personnage)
+          const k = Math.min(1, (sim.time - e.collectedAt) / 0.3);
+          const ease = k * k;
+          o.scale.setScalar(Math.max(0.01, 1 - ease * 0.95));
+          o.position.x += (sim.x - o.position.x) * ease;
+          o.position.y += (sim.y + 1.2 - o.position.y) * ease;
+          o.position.z += (-sim.s - o.position.z) * ease;
           o.visible = k < 1;
         } else o.scale.setScalar(1);
       } else o.position.set(laneX(e.lane), 0, -e.s);

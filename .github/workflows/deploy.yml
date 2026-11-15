@@ -1,9 +1,16 @@
-# Déploiement de MNNROW sur GitHub Pages.
+# Vérification puis déploiement de MNNROW sur GitHub Pages.
 # Prérequis (une seule fois) : Settings → Pages → Source : « GitHub Actions ».
-name: Déployer sur GitHub Pages
+#
+# 1. test   : tests de logique, compilation, chemins de dist/, tests navigateur
+#             (Playwright + Chromium) -> le site n'est publié QUE si tout passe.
+# 2. deploy : publication de l'artefact (push sur main uniquement).
+# Les pull requests passent par l'étape « test » sans être publiées.
+name: Tester et déployer sur GitHub Pages
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -13,30 +20,48 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
-      - name: Tests de la logique de jeu
+      - name: Dépendances
+        run: npm ci
+      - name: Tests de la logique de jeu (Node)
         run: npm test
       - name: Compilation (base /Subway-Surferswebgl/)
         run: npm run build
+      - name: Chemins des ressources dans dist/
+        run: npm run check:dist
+      - name: Navigateur Chromium pour Playwright (avec bibliothèques système)
+        run: npx playwright install --with-deps chromium
+      - name: Tests navigateur de bout en bout
+        run: npm run test:e2e -- --no-build
+      - name: Rapport et captures des tests navigateur
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: test-results/
+          retention-days: 7
       - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: dist
 
   deploy:
-    needs: build
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

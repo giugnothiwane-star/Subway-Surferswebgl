@@ -48,6 +48,24 @@ export class PlayerView {
     this.group.add(this.shield);
     this.jetpack = jetpackModel();
     this.jetpack.visible = false;
+    // flammes stylisées des tuyères (cône additif, cœur blanc -> orange)
+    this.flameMat = new THREE.MeshBasicMaterial({ color: 0xffa53a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    this.flameCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff3c0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const flameGeo = new THREE.ConeGeometry(0.075, 0.5, 12, 1, true);
+    flameGeo.translate(0, -0.25, 0);
+    flameGeo.rotateX(Math.PI);
+    const coreGeo = new THREE.ConeGeometry(0.04, 0.28, 10, 1, true);
+    coreGeo.translate(0, -0.14, 0);
+    coreGeo.rotateX(Math.PI);
+    this.flames = [];
+    for (const sx of [-1, 1]) {
+      const f = new THREE.Mesh(flameGeo, this.flameMat);
+      f.add(new THREE.Mesh(coreGeo, this.flameCoreMat));
+      f.position.set(sx * 0.13, -0.35, 0);
+      f.rotation.x = Math.PI;
+      this.jetpack.add(f);
+      this.flames.push(f);
+    }
     this.magnet = magnetModel();
     this.magnet.scale.setScalar(0.55);
     this.magnet.visible = false;
@@ -96,6 +114,11 @@ export class PlayerView {
       hand.add(this.magnet);
       this.magnet.position.set(0, -0.12, 0.04);
       this.magnet.rotation.set(Math.PI, 0, 0);
+      // taille réelle constante (~32 cm) quelle que soit l'échelle de l'os de la
+      // main : sur le personnage livré, l'os est agrandi et l'aimant masquait le joueur
+      rig.root.updateMatrixWorld(true);
+      const ws = hand.getWorldScale(new THREE.Vector3()).x;
+      this.magnet.scale.setScalar(0.42 / Math.max(0.05, ws));
     }
     // cape : sous la nuque, dans le dos (modèle importé : position estimée)
     this.cape.mesh.removeFromParent();
@@ -243,6 +266,13 @@ export class PlayerView {
     }
     // jetpack, aimant, baskets, bouclier
     this.jetpack.visible = jetOn || (sim.jet === 'descend');
+    if (this.jetpack.visible) {
+      const thrust = jetOn ? 1 : 0.45;
+      for (const [i, f] of this.flames.entries()) {
+        const fl = thrust * (0.85 + Math.sin(this.time * 47 + i * 2.1) * 0.12 + Math.sin(this.time * 23 + i) * 0.08);
+        f.scale.set(1, fl * 1.6, 1);
+      }
+    }
     this.magnet.visible = sim.powerups.active('magnet') && !jetOn;
     const sneak = sim.powerups.active('sneakers');
     if (this.materials?.Shoes) {

@@ -72,10 +72,10 @@ async function restoreCustomFiles(game, storage) {
 }
 
 async function main() {
-  ui.boot(0.1, 'Vérification de la compatibilité WebGL…');
+  ui.boot(0.1, 'Vérification de la compatibilité WebGL 2…');
   const gl = detectWebGL();
   if (!gl.ok) {
-    ui.fatal(`WebGL n'est pas disponible : ${gl.reason}`);
+    ui.fatal(gl.reason);
     return;
   }
   const storage = new Storage();

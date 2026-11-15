@@ -1,11 +1,19 @@
 // Tests de bout en bout dans Chromium (Playwright) sur la version compilée,
 // servie sous /Subway-Surferswebgl/ comme sur GitHub Pages.
-// Usage : npm run build && npx vite preview --port 4173 & node tools/e2e.mjs
-// Produit test-results/e2e-report.json et des captures d'écran.
+// Usage simple : npm run test:e2e (compile, lance le serveur, teste, l'arrête).
+// Usage manuel : npm run build && npx vite preview --port 4173 & node tools/e2e.mjs
+// Produit test-results/e2e-report.json, des captures d'écran et, pour chaque
+// vérification en échec, une capture test-results/echec-NN.png.
 import { createRequire } from 'node:module';
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+let chromium;
+try {
+  ({ chromium } = require('playwright'));
+} catch {
+  console.error('Playwright est introuvable. Installe les dépendances de développement : npm ci, puis npx playwright install chromium');
+  process.exit(2);
+}
 
 const BASE = process.argv[2] || 'http://localhost:4173/Subway-Surferswebgl/';
 const OUT = process.argv[3] || 'test-results';
@@ -22,13 +30,24 @@ async function check(name, fn) {
     results.push({ name, ok: true, ms: Date.now() - t0, detail: detail ?? '' });
     console.log(`✔ ${name}${detail ? ' — ' + detail : ''}`);
   } catch (e) {
-    results.push({ name, ok: false, ms: Date.now() - t0, detail: e.message });
-    console.log(`✘ ${name} — ${e.message}`);
+    let shot = '';
+    try {
+      shot = `${OUT}/echec-${String(results.length + 1).padStart(2, '0')}.png`;
+      await page.screenshot({ path: shot });
+    } catch { shot = ''; }
+    results.push({ name, ok: false, ms: Date.now() - t0, detail: e.message, screenshot: shot });
+    console.log(`✘ ${name} — ${e.message}${shot ? ` (capture : ${shot})` : ''}`);
   }
 }
 const assert = (c, msg) => { if (!c) throw new Error(msg); };
 
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+let browser;
+try {
+  browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+} catch (e) {
+  console.error(`Impossible de lancer Chromium : ${e.message.split('\n')[0]}\nInstalle le navigateur : npx playwright install --with-deps chromium`);
+  process.exit(2);
+}
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1, userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36' });
 const page = await ctx.newPage();
 page.on('pageerror', (e) => pageErrors.push(e.message));
