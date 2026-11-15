@@ -142,6 +142,20 @@
         <p class="muted small">Une même graine produit exactement la même piste : pratique pour rejouer une séquence problématique.</p>
         <div class="row"><input type="text" id="s-seed" maxlength="24" placeholder="ex. 3KQ9ZP" autocomplete="off" spellcheck="false" /><button class="btn small" id="s-seedplay">Jouer</button></div>
         <label class="toggle"><input type="checkbox" id="s-autopilot" /> Pilote automatique (démo / test)</label>
+        <h3>Propriétaire</h3>
+        <div id="s-owner-locked">
+          <p class="muted small">Réservé au propriétaire du site.</p>
+          <div class="row"><input type="password" id="s-ownercode" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Code propriétaire" autocomplete="off" spellcheck="false" aria-label="Code propriétaire" /><button class="btn small" id="s-ownerunlock">Déverrouiller</button></div>
+        </div>
+        <div id="s-owner-open" class="hidden">
+          <p class="small owner-ok">✓ Mode propriétaire actif : dans Studio → Pièce, une image peut être mise « pour tout le monde ».</p>
+          <label class="field">Jeton GitHub du propriétaire (enregistré chiffré sur cet appareil)
+            <input type="password" id="s-ownertoken" placeholder="github_pat_…" autocomplete="off" spellcheck="false" />
+          </label>
+          <p class="muted small" id="s-ownertokenstate"></p>
+          <div class="row"><button class="btn small" id="s-ownertokensave">Enregistrer le jeton</button><button class="btn small ghost" id="s-ownertokenforget">Oublier le jeton</button><button class="btn small ghost" id="s-ownerlock">Verrouiller</button></div>
+        </div>
+        <p class="small" id="s-ownermsg" aria-live="polite"></p>
         <h3>Données</h3>
         <button class="btn danger small" id="s-reset">Réinitialiser la progression</button>
         <p class="muted small" id="s-version"></p>
@@ -208,6 +222,12 @@
           <div id="st-coinlib" class="skins"></div>
           <p id="st-coinlibempty" class="muted small">Aucune image : importe tes propres images de pièces.</p>
           <label class="field">Ajouter une image à Mes images (PNG / JPG / WebP) <input type="file" id="st-coinfile" accept="image/png,image/jpeg,image/webp" /></label>
+          <div id="st-sharechoice" class="sharechoice hidden" role="group" aria-label="Pour qui appliquer l'image">
+            <p class="small">Mettre cette image sur les pièces :</p>
+            <div class="row"><button class="btn small" id="st-shareme">Pour moi</button><button class="btn small primary" id="st-shareall">Pour tout le monde</button><button class="btn small ghost" id="st-sharecancel">Annuler</button></div>
+          </div>
+          <p id="st-sharedinfo" class="muted small hidden">Une image partagée par le propriétaire est affichée sur les pièces.</p>
+          <button id="st-shareremove" class="btn small ghost hidden">Retirer l'image partagée (pour tout le monde)</button>
           <button class="btn small ghost" data-clear="coin">Revenir au symbole MNNROW</button>
           <h3>Style de la face</h3>
           <div class="segmented small" id="st-coinstyle" role="radiogroup" aria-label="Style de face"><button data-style="emboss">Encastré 3D (relief)</button><button data-style="flat">Plein (image entière)</button></div>

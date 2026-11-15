@@ -2,6 +2,7 @@
 // personnages, hoverboards, missions), paramètres, studio et HUD.
 // Construction DOM sans innerHTML pour les données (pas d'injection HTML).
 import { MAPS, getMap } from '../data/maps.js';
+import { prepareImage } from '../core/SharedContent.js';
 import { BOARDS, CHARACTERS, COIN_SKINS, MODES, VERSIONS } from '../data/catalog.js';
 import { missionDef } from '../gameplay/Missions.js';
 import { ensureMissions } from '../gameplay/Missions.js';
@@ -573,7 +574,14 @@ export class UI {
     imageInput('st-skinfile', 'skin', (t) => { s().skins.character.skin = 'texture'; this.game.applyCustom({ skinTexture: t }); this.syncSkins(); this.setSubject('character', true); });
     imageInput('st-capefile', 'cape', (t) => { s().skins.cape.enabled = true; this.game.applyCustom({ capeTexture: t }); this.syncSkins(); this.setSubject('cape', true); });
     imageInput('st-boardfile', 'board', (t) => { this.game.applyCustom({ boardTexture: t }); this.setSubject('board', true); });
-    $('st-coinfile').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) this.addLocalCoin(f); });
+    $('st-coinfile').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      // propriétaire : choix « pour moi » / « pour tout le monde »
+      if (this.owner?.unlocked) { this.pendingCoin = f; $('st-sharechoice').classList.remove('hidden'); return; }
+      this.addLocalCoin(f);
+    });
     imageInput('st-trainfile', 'train', (t) => { s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; this.game.applyCustom({ trainTexture: t }); this.setSubject('train', true); });
     document.querySelectorAll('[data-clear]').forEach((b) => b.addEventListener('click', async () => {
       const slot = b.dataset.clear;
@@ -800,6 +808,83 @@ export class UI {
         img.src = url;
       }).catch(() => {});
     }
+  }
+
+  // ---- Mode propriétaire et image partagée -------------------------------------
+  attachOwner(owner, shared) {
+    this.owner = owner;
+    this.shared = shared;
+    const msg = (t, ok = true) => { $('s-ownermsg').textContent = t; $('s-ownermsg').style.color = ok ? 'var(--lime)' : 'var(--danger)'; };
+    const smsg = (t, ok = true) => { $('st-msg').textContent = t; $('st-msg').style.color = ok ? 'var(--lime)' : 'var(--danger)'; };
+    const refresh = () => {
+      $('s-owner-locked').classList.toggle('hidden', owner.unlocked);
+      $('s-owner-open').classList.toggle('hidden', !owner.unlocked);
+      $('s-ownertokenstate').textContent = owner.hasToken() ? 'Jeton enregistré (chiffré avec ton code).' : 'Aucun jeton : nécessaire pour publier pour tout le monde.';
+      $('st-shareremove').classList.toggle('hidden', !owner.unlocked);
+      if (!owner.unlocked) { $('st-sharechoice').classList.add('hidden'); this.pendingCoin = null; }
+    };
+    owner.onChange(refresh);
+    refresh();
+    const tryUnlock = async () => {
+      const code = $('s-ownercode').value;
+      $('s-ownercode').value = '';
+      this.click();
+      msg('Vérification…');
+      const r = await owner.unlock(code);
+      if (r.ok) msg('✓ Mode propriétaire activé (jusqu\'à la fermeture de la page).');
+      else msg(r.wait ? `✗ Code incorrect. Nouvel essai possible dans ${r.wait} s.` : '✗ Code incorrect.', false);
+    };
+    $('s-ownerunlock').addEventListener('click', tryUnlock);
+    $('s-ownercode').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tryUnlock(); } });
+    $('s-ownerlock').addEventListener('click', () => { this.click(); owner.lock(); msg('Mode propriétaire verrouillé.'); });
+    $('s-ownertokensave').addEventListener('click', async () => {
+      this.click();
+      try { await owner.saveToken($('s-ownertoken').value); $('s-ownertoken').value = ''; msg('✓ Jeton enregistré, chiffré avec ton code.'); } catch (e) { msg(`✗ ${e.message}`, false); }
+    });
+    $('s-ownertokenforget').addEventListener('click', () => { this.click(); owner.forgetToken(); msg('Jeton effacé de cet appareil.'); });
+    // Studio : choix pour l'image importée
+    $('st-sharecancel').addEventListener('click', () => { this.click(); this.pendingCoin = null; $('st-sharechoice').classList.add('hidden'); });
+    $('st-shareme').addEventListener('click', () => {
+      const f = this.pendingCoin;
+      this.pendingCoin = null;
+      $('st-sharechoice').classList.add('hidden');
+      if (f) this.addLocalCoin(f);
+    });
+    $('st-shareall').addEventListener('click', async () => {
+      const f = this.pendingCoin;
+      if (!f) return;
+      this.click();
+      $('st-shareall').disabled = true;
+      smsg('Publication chiffrée en cours…');
+      try {
+        const token = await owner.token();
+        const tex = await this.game.assets.imageTexture(f); // validation (format, taille)
+        const bytes = await prepareImage(f);
+        await shared.publish(bytes, token);
+        this.game.setSharedCoin(tex);
+        this.sharedChanged(true);
+        this.pendingCoin = null;
+        $('st-sharechoice').classList.add('hidden');
+        smsg('✓ Image mise pour tout le monde (chiffrée). Les autres joueurs la verront dans les 30 s, sans rechargement.');
+      } catch (e) {
+        smsg(`✗ ${e.message}`, false);
+      } finally {
+        $('st-shareall').disabled = false;
+      }
+    });
+    $('st-shareremove').addEventListener('click', async () => {
+      this.click();
+      try {
+        const done = await shared.remove(await owner.token());
+        this.game.setSharedCoin(null);
+        this.sharedChanged(false);
+        smsg(done ? '✓ Image partagée retirée pour tout le monde.' : 'Aucune image partagée en ligne.');
+      } catch (e) { smsg(`✗ ${e.message}`, false); }
+    });
+  }
+
+  sharedChanged(on) {
+    $('st-sharedinfo')?.classList.toggle('hidden', !on);
   }
 
   // Ajoute une image à « Mes images » (stockée sur l'appareil, jamais publiée).
