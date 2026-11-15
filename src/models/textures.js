@@ -1136,3 +1136,60 @@ export function shade(hex, amt) {
   else c.lerp(new THREE.Color(0, 0, 0), -amt);
   return '#' + c.getHexString();
 }
+
+// ---- Tissus du personnage (gris clair, teintés par la couleur choisie) -----------
+// Maille de pull : rangées de « V » ; jean : sergé diagonal + fils irréguliers ;
+// cuir de chaussure : grain fin. Valeurs proches du blanc pour ne pas assombrir
+// la couleur du joueur, le relief vient de la carte de normales dérivée.
+export function fabricTexture(kind) {
+  return makeTexture(`fabric:${kind}`, 256, 256, (ctx, w, h) => {
+    const r = rng(hashStr(kind));
+    ctx.fillStyle = '#f2f2f2';
+    ctx.fillRect(0, 0, w, h);
+    if (kind === 'knit') {
+      const sw = 16;
+      const sh = 12;
+      for (let y = 0; y < h; y += sh) {
+        for (let x = 0; x < w; x += sw) {
+          const v = 205 + Math.floor(r() * 30);
+          ctx.strokeStyle = `rgb(${v},${v},${v})`;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(x + 2, y + 1); ctx.lineTo(x + sw / 2, y + sh - 1); ctx.lineTo(x + sw - 2, y + 1);
+          ctx.stroke();
+        }
+      }
+      // côtes du bas de manche / ourlets
+      ctx.fillStyle = 'rgba(0,0,0,0.05)';
+      for (let x = 0; x < w; x += 8) ctx.fillRect(x, 0, 2, h);
+    } else if (kind === 'denim') {
+      ctx.strokeStyle = 'rgba(0,0,0,0.13)';
+      ctx.lineWidth = 2;
+      for (let i = -h; i < w; i += 5) { ctx.beginPath(); ctx.moveTo(i, h); ctx.lineTo(i + h, 0); ctx.stroke(); }
+      for (let i = 0; i < 900; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${r() * 0.35})`;
+        ctx.fillRect(r() * w, r() * h, 1 + r() * 6, 1);
+      }
+      // usure claire au centre (délavé)
+      const g = ctx.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.7);
+      g.addColorStop(0, 'rgba(255,255,255,0.18)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    } else if (kind === 'leather') {
+      for (let i = 0; i < 2600; i++) {
+        const v = 200 + Math.floor(r() * 50);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.beginPath(); ctx.arc(r() * w, r() * h, 0.8 + r() * 1.6, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (kind === 'hair') {
+      for (let i = 0; i < 700; i++) {
+        const x = r() * w;
+        const v = 170 + Math.floor(r() * 85);
+        ctx.strokeStyle = `rgb(${v},${v},${v})`;
+        ctx.lineWidth = 1 + r() * 1.5;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.quadraticCurveTo(x + (r() - 0.5) * 20, h / 2, x + (r() - 0.5) * 10, h); ctx.stroke();
+      }
+    }
+  }, { repeat: true });
+}

@@ -60,6 +60,7 @@ export class Game {
       this.entities?.setProfile(p);
       this.particles.scale = p.particles;
       this.fx.setProfile(p);
+      this.player?.setQuality(p.name);
     });
     window.addEventListener('resize', () => this.resize());
     window.visualViewport?.addEventListener('resize', () => this.resize());
@@ -71,6 +72,7 @@ export class Game {
   async init() {
     const rig = await this.assets.loadCharacter();
     this.player = new PlayerView(this.scene);
+    this.player.quality = this.r.profile.name;
     this.player.onRig = () => this.applyCharacter(); // tout nouveau rig reçoit skins + cape
     this.player.setRig(rig);
     this.applyCharacter();

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { applyLook, createCharacter } from '../models/Character.js';
 import { buildHoverboard } from '../models/Hoverboards.js';
 import { jetpackModel, magnetModel, shieldBubbleMaterial } from '../models/Props.js';
-import { makeTexture } from '../models/textures.js';
+import { fabricTexture, makeTexture, normalTexture } from '../models/textures.js';
 import { Cape } from '../models/Cape.js';
 
 const ONE_SHOT = new Set(['runStart', 'jump', 'land', 'roll', 'hit', 'death', 'leanLeft', 'leanRight', 'collect']);
@@ -141,10 +141,11 @@ export class PlayerView {
       this.materials.Shirt.map = look.shirtTexture;
       this.materials.Shirt.color.set(0xffffff);
       this.materials.Shirt.needsUpdate = true;
-    } else if (this.materials.Shirt?.map) {
-      this.materials.Shirt.map = null;
+    } else if (this.materials.Shirt && this.materials.Shirt.map !== this.fabric('knit')) {
+      this.materials.Shirt.map = this.fabric('knit');
       this.materials.Shirt.needsUpdate = true;
     }
+    this.enhanceMaterials();
   }
 
   setBoard(style, color, color2, customTexture = null) {
@@ -185,6 +186,43 @@ export class PlayerView {
   }
 
   // Événements de la simulation -> animations.
+  // Textures de tissu partagées (répétées pour un grain fin sur chaque pièce).
+  fabric(kind) {
+    const t = fabricTexture(kind);
+    if (!t.userData.tiled) { t.repeat.set(kind === 'hair' ? 2 : 3, kind === 'hair' ? 1 : 3); t.userData.tiled = true; }
+    return t;
+  }
+
+  // Matières crédibles : maille, jean, cuir, caoutchouc, peau satinée, cheveux.
+  // Relief (cartes de normales) seulement hors qualité LOW.
+  enhanceMaterials() {
+    const M = this.materials || {};
+    const relief = this.quality !== 'LOW';
+    const set = (name, props, fabric, strength = 1.2, scale = 0.6) => {
+      const m = M[name];
+      if (!m) return;
+      Object.assign(m, props);
+      if (fabric && name !== 'Shirt') m.map = this.fabric(fabric);
+      const nm = fabric && relief ? normalTexture(this.fabric(fabric), strength) : null;
+      if (nm && !nm.userData.tiled) { nm.repeat.copy(this.fabric(fabric).repeat); nm.userData.tiled = true; }
+      if (m.normalMap !== nm) { m.normalMap = nm; m.normalScale?.set(scale, scale); m.needsUpdate = true; }
+    };
+    set('Shirt', { roughness: 0.88, metalness: 0 }, 'knit', 1.6, 0.7);
+    set('Pants', { roughness: 0.82, metalness: 0 }, 'denim', 1.4, 0.55);
+    set('Shoes', { roughness: 0.42, metalness: 0.05 }, 'leather', 1, 0.35);
+    set('Sole', { roughness: 0.92, metalness: 0 });
+    set('Skin', { roughness: 0.62, metalness: 0 });
+    set('Hair', { roughness: 0.4, metalness: 0.05 }, 'hair', 2, 0.5);
+    set('Accessory', { roughness: 0.28, metalness: 0.2 });
+    set('Accent', { roughness: 0.5, metalness: 0.1 });
+  }
+
+  setQuality(name) {
+    if (this.quality === name) return;
+    this.quality = name;
+    this.enhanceMaterials();
+  }
+
   onEvent(ev) {
     switch (ev.type) {
       case 'lane': this.overlay(ev.dir < 0 ? 'leanLeft' : 'leanRight'); break;

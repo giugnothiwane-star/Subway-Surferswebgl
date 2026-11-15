@@ -114,7 +114,9 @@ export class CameraRig {
     this.pos.x = damp(this.pos.x, tx, kx, dt);
     this.pos.y = damp(this.pos.y, ty, this.reduced ? 4 : 6, dt);
     this.pos.z = sim.alive ? tz : damp(this.pos.z, tz, 4, dt); // suivi exact en profondeur pendant la course
-    this.look.set(damp(this.look.x, sim.x * 0.55, 7, dt), damp(this.look.y, lookY, 6, dt), sim.alive ? lookZ : damp(this.look.z, lookZ, 4, dt));
+    // anticipation : le regard part déjà vers la voie visée pendant un changement
+    const leadX = sim.x * 0.55 + (sim.targetLane * 2.5 - sim.x) * (this.reduced ? 0 : 0.22);
+    this.look.set(damp(this.look.x, leadX, 7, dt), damp(this.look.y, lookY, 6, dt), sim.alive ? lookZ : damp(this.look.z, lookZ, 4, dt));
     // légère inclinaison dans les changements de voie
     const vx = dt > 0 ? (this.pos.x - prevX) / dt : 0;
     this.roll = damp(this.roll, this.reduced ? 0 : Math.max(-0.05, Math.min(0.05, -vx * 0.012)), 8, dt);

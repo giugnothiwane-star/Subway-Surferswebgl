@@ -52,6 +52,7 @@ Elles ne remplacent pas le travail d'un artiste 3D professionnel.
 | @fontsource/orbitron | 5.2.8 | SIL Open Font License 1.1 | Police « Orbitron » du chrono (fichiers woff2/woff inclus dans le build) |
 | fflate | 0.8.2 | MIT | Décompression des archives ZIP importées dans le studio (chargé à la demande) |
 | vite | 5.4.11 | MIT | Outil de compilation (développement uniquement) |
+| playwright | 1.63.0 | Apache-2.0 | Tests navigateur et captures (développement uniquement, jamais livré au joueur) |
 
 Outils de test et de production utilisés hors du jeu : Playwright/Chromium (tests et captures), module pip
 `bpy` (scripts Blender). Ils ne sont pas distribués avec le jeu.
