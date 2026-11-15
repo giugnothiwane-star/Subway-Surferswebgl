@@ -542,7 +542,15 @@ await check('Chrono : un seul chrono stylé, figé à la chute', async () => {
     return { radius: parseFloat(cs.borderTopLeftRadius), font: getComputedStyle(document.getElementById('h-time')).fontFamily, coin: !!document.getElementById('h-cointime'), fontOk: document.fonts.check('900 20px Orbitron'), cs: document.getElementById('h-time-cs').textContent };
   });
   assert(look.radius >= 10 && /Orbitron/.test(look.font) && !look.coin && /^\.\d\d$/.test(look.cs), JSON.stringify(look));
-  await waitFor(() => window.__MNNROW.info().state === 'gameover', null, 60000);
+  // avance la simulation jusqu'à la barrière (indépendant de la vitesse de la
+  // machine de test : sur un serveur lent, la course réelle prenait > 60 s)
+  await game(() => {
+    const g = window.__MNNROW.game;
+    let n = 0;
+    while (g.sim.alive && n++ < 120000) g.sim.step(1 / 120); // tout droit, sans pilote : percute la barrière
+    for (const e of g.sim.drainEvents()) if (e.type === 'crash') g.onSimEvent(e);
+  });
+  await waitFor(() => window.__MNNROW.info().state === 'gameover', null, 120000);
   const t1 = await page.evaluate(() => document.getElementById('h-time').textContent + document.getElementById('h-time-cs').textContent);
   await wait(1500);
   const t2 = await page.evaluate(() => document.getElementById('h-time').textContent + document.getElementById('h-time-cs').textContent);
