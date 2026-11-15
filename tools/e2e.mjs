@@ -327,6 +327,36 @@ await check('Rejouer juste après une fin de partie : pas de ralenti ni de danse
   return 'slowMo = 0, celebrate = 0';
 });
 
+await check('Skin Galaxie : équipement complet, trains jamais modifiés, conservé après carte et rechargement', async () => {
+  await page.click('[data-nav="studio"]');
+  await page.locator('#st-tabs [data-tab="skins"]').click();
+  await page.click('#st-galaxyall');
+  await wait(800);
+  await page.click('[data-nav="studio-exit"]');
+  const mats = () => game(() => {
+    const g = window.__MNNROW.game;
+    const char = new Set();
+    g.player.rig.root.traverse((o) => { if (o.isMesh && o.userData.category !== 'cape') [].concat(o.material).forEach((m) => char.add(m.name)); });
+    const trains = new Set();
+    g.entities.group.traverse((o) => { if (o.isMesh && /^Train_/.test(o.name)) [].concat(o.material).forEach((m) => trains.add(m.name)); });
+    const board = []; g.player.board.traverse((o) => o.isMesh && [].concat(o.material).forEach((m) => board.push(m.name)));
+    return { char: [...char], cape: g.player.cape.mesh.visible ? g.player.cape.mesh.material.name : null, coins: [].concat(g.entities.coins.material).map((m) => m.name), board, trains: [...trains] };
+  });
+  await game(() => { const g = window.__MNNROW.game; g.setMap('desert'); g.autopilot = true; g.startRun('GALAXYTEST'); g.fastForward(350); });
+  await wait(1500);
+  const a = await mats();
+  await game(() => window.__MNNROW.game.quitToMenu());
+  await page.reload();
+  await waitFor(() => window.__MNNROW && document.getElementById('menu').classList.contains('active'), null, 120000);
+  const b = await mats();
+  // remise à zéro pour la suite des tests
+  await game(() => { const g = window.__MNNROW.game; g.save.skins.character.skin = 'normal'; g.save.skins.cape.enabled = false; g.save.skins.cape.skin = 'normal'; g.save.skins.coin.skin = 'normal'; g.save.skins.board.skin = 'normal'; g.applySkins(); g.storage.save(); });
+  const ok = (r) => r.char.includes('Skin_galaxy') && r.char.includes('EyeWhite') && r.cape === 'Skin_galaxy' && r.coins.every((n) => n === 'Skin_galaxy') && r.board.filter((n) => n === 'Skin_galaxy').length === 3;
+  assert(ok(a) && ok(b), JSON.stringify({ a, b }));
+  assert(a.trains.length > 0 && a.trains.every((n) => !/Skin_/.test(n)), `trains : ${a.trains.join(',')}`);
+  return `perso + cape + pièces + board en Galaxie ; ${a.trains.length} matériaux de trains intacts ; conservé après rechargement`;
+});
+
 await check('19. Redimensionnement / orientation paysage', async () => {
   await page.setViewportSize({ width: 915, height: 412 });
   await wait(700);

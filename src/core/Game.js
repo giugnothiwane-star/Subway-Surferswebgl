@@ -17,7 +17,9 @@ import { getMap } from '../data/maps.js';
 import { BOARDS, CHARACTERS, MODES, VERSIONS } from '../data/catalog.js';
 import { claim, commitRun, ensureMissions, snapshotBase, trackRun } from '../gameplay/Missions.js';
 import { buildTrain } from '../models/Trains.js';
-import { coinGeometry, coinGlowMaterial } from '../models/Props.js';
+import { SkinManager } from '../skins/SkinManager.js';
+import { buildCoinPreview } from '../skins/CoinFactory.js';
+import { setSkinMotion, setSkinQuality, updateSkins } from '../skins/SkinShader.js';
 
 const _v = new THREE.Vector3();
 
@@ -43,7 +45,13 @@ export class Game {
     this.slowMo = 0;
     this.r.on('lost', () => this.onContextLost());
     this.r.on('restored', () => this.onContextRestored());
+    // moteur de skins (Galaxie…) : qualité du shader liée au profil graphique
+    this.skins = new SkinManager();
+    this.skins.setConfig(this.save.skins);
+    setSkinQuality(this.r.profileKey);
+    setSkinMotion(this.save.skins.animated);
     this.r.on('profile', (p) => {
+      setSkinQuality(this.r.profileKey);
       this.env?.setProfile(p);
       this.entities?.setProfile(p);
       this.particles.scale = p.particles;
@@ -58,6 +66,7 @@ export class Game {
   async init() {
     const rig = await this.assets.loadCharacter();
     this.player = new PlayerView(this.scene);
+    this.player.onRig = () => this.applyCharacter(); // tout nouveau rig reçoit skins + cape
     this.player.setRig(rig);
     this.applyCharacter();
     this.applyBoard();
@@ -102,19 +111,37 @@ export class Game {
   }
 
   applyCharacter() {
-    this.player?.setLook(this.look());
+    if (!this.player) return;
+    this.player.setLook(this.look());
+    this.skins.textures.character = this.custom.skinTexture || null;
+    this.skins.textures.board = this.custom.boardTexture || null;
+    this.player.cape.setTexture(this.custom.capeTexture || null);
+    this.skins.applyCharacter(this.player.rig.root, !!this.player.rig.isCustom);
+    this.player.setCape(this.save.skins.cape.enabled);
+    this.skins.applyCape(this.player.cape);
+  }
+
+  // Applique toute la configuration des skins (studio, restauration, carte).
+  applySkins() {
+    this.skins.setConfig(this.save.skins);
+    setSkinMotion(this.save.skins.animated);
+    this.applyCharacter();
+    this.applyBoard();
+    this.entities?.applyCustom(this.entityCustom());
   }
 
   applyBoard() {
     const b = BOARDS.find((x) => x.id === this.save.selected.board) || BOARDS[0];
     const vb = this.version().board || {};
     this.player?.setBoard(b.id, this.save.board.color || vb.color || b.color, this.save.board.color2 || b.color2, this.custom.boardTexture);
+    this.skins.textures.board = this.custom.boardTexture || null;
+    this.skins.applyBoard(this.player?.board);
   }
 
   // Réglages du studio transmis au rendu des entités (pièces, trains).
   entityCustom() {
     const st = this.save.studio;
-    return { coinTint: st.coinTint, coinGlow: st.coinGlow, coinTexture: this.custom.coinTexture, trainLivery: st.trainLivery, trainTexture: this.custom.trainTexture };
+    return { coinTint: st.coinTint, coinGlow: st.coinGlow, coin: this.save.skins.coin, coinTexture: this.custom.coinTexture, trainLivery: st.trainLivery, trainTexture: this.custom.trainTexture };
   }
 
   applyCustom(custom) {
@@ -344,6 +371,7 @@ export class Game {
 
   frame(dt) {
     const st = this.state;
+    updateSkins(st === 'paused' ? 0 : dt);
     if (st === 'playing' || (st === 'gameover' && this.sim) || st === 'paused') {
       const sim = this.sim;
       if (st === 'playing') {
@@ -440,36 +468,25 @@ export class Game {
   setStudioSubject(subject) {
     if (this.studioObject) {
       this.scene.remove(this.studioObject);
-      this.studioObject.traverse((o) => { if (o.isMesh && o.userData.ownGeometry) o.geometry.dispose(); });
+      this.studioObject.traverse((o) => {
+        if (o.isMesh && o.userData.ownGeometry) o.geometry.dispose();
+        if (o.isMesh && o.userData.ownMaterial) { o.material.map?.dispose(); o.material.dispose(); }
+      });
       this.studioObject = null;
     }
     this.studioSubject = subject;
-    this.player.group.visible = subject === 'character' || subject === 'board';
+    this.player.group.visible = subject === 'character' || subject === 'board' || subject === 'cape';
     this.menuAnim = subject === 'board' ? 'hoverboard' : 'idle';
-    let target = new THREE.Vector3(0, 1, 0);
-    let dist = 4;
+    let target = new THREE.Vector3(0, 0.95, 0);
+    let dist = this.rig.aspect < 0.8 ? 6.2 : 4.6;
     if (subject === 'coin') {
-      const c = coinGeometry({ symbol: !this.custom.coinTexture });
-      const mesh = new THREE.Mesh(c.geometry, c.material);
-      mesh.userData.ownGeometry = true;
-      mesh.scale.setScalar(2.2);
-      if (this.custom.coinTexture) {
-        const face = new THREE.Mesh(new THREE.CircleGeometry(0.375, 48), new THREE.MeshStandardMaterial({ map: this.custom.coinTexture, emissive: 0xffffff, emissiveMap: this.custom.coinTexture, emissiveIntensity: 0.35, alphaTest: 0.4, roughness: 0.5, metalness: 0.05 }));
-        face.position.z = 0.063;
-        face.userData.ownGeometry = true;
-        mesh.add(face);
-      }
-      const g = this.save.studio.coinGlow;
-      if (g.enabled) {
-        const halo = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), coinGlowMaterial(g.color, g.intensity));
-        halo.userData.ownGeometry = true;
-        halo.renderOrder = 4;
-        halo.frustumCulled = false;
-        mesh.add(halo);
-        this.studioGlow = halo.material;
-      } else this.studioGlow = null;
-      mesh.position.set(0, 1.2, 0);
-      this.studioObject = mesh;
+      // même usine de matériaux que le jeu : l'aperçu montre exactement le rendu en course
+      const cfg = { ...this.save.skins.coin, tint: this.save.studio.coinTint };
+      const coin = buildCoinPreview(cfg, this.custom.coinTexture, this.save.studio.coinGlow);
+      coin.scale.setScalar(2.2);
+      this.studioGlow = coin.userData.glowMaterial || null;
+      coin.position.set(0, 1.2, 0);
+      this.studioObject = coin;
       target.set(0, 1.2, 0);
       dist = 5;
     } else if (subject === 'train') {
@@ -488,7 +505,8 @@ export class Game {
       this.player.group.visible = false;
     }
     this.orbit.target.copy(target);
-    const dir = new THREE.Vector3(0.6, 0.35, 1).normalize();
+    const dir = subject === 'cape' ? new THREE.Vector3(0.45, 0.3, -1).normalize() : new THREE.Vector3(0.6, 0.35, 1).normalize();
+    if (subject === 'cape') { target.set(0, 1.15, 0); dist = 4.2; }
     this.rig.camera.position.copy(target).addScaledVector(dir, dist);
     this.rig.camera.fov = 45;
     this.rig.camera.updateProjectionMatrix();

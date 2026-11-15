@@ -6,6 +6,7 @@ import { applyLook, createCharacter } from '../models/Character.js';
 import { buildHoverboard } from '../models/Hoverboards.js';
 import { jetpackModel, magnetModel, shieldBubbleMaterial } from '../models/Props.js';
 import { makeTexture } from '../models/textures.js';
+import { Cape } from '../models/Cape.js';
 
 const ONE_SHOT = new Set(['runStart', 'jump', 'land', 'roll', 'hit', 'death', 'leanLeft', 'leanRight', 'collect']);
 const ADDITIVE = new Set(['leanLeft', 'leanRight', 'collect']);
@@ -50,6 +51,11 @@ export class PlayerView {
     this.magnet = magnetModel();
     this.magnet.scale.setScalar(0.55);
     this.magnet.visible = false;
+    // cape 3D (physique légère), attachée au torse dans setRig
+    this.cape = new Cape();
+    this.cape.mesh.visible = false;
+    this.capeOn = false;
+    this.prevX = 0;
     this.setRig(createCharacter());
   }
 
@@ -91,7 +97,17 @@ export class PlayerView {
       this.magnet.position.set(0, -0.12, 0.04);
       this.magnet.rotation.set(Math.PI, 0, 0);
     }
+    // cape : sous la nuque, dans le dos (modèle importé : position estimée)
+    this.cape.mesh.removeFromParent();
+    if (chest) {
+      chest.add(this.cape.mesh);
+      this.cape.mesh.position.set(0, 0.2, -0.17);
+    } else {
+      rig.root.add(this.cape.mesh);
+      this.cape.mesh.position.set(0, 1.42, -0.18);
+    }
     this.customAnim = !rig.clips?.length;
+    this.onRig?.();
     this.play('idle', 0);
   }
 
@@ -174,8 +190,18 @@ export class PlayerView {
     return this.play(sim.v > 23 ? 'sprint' : 'run', 0.25);
   }
 
+  setCape(on) {
+    this.capeOn = on;
+    this.cape.mesh.visible = on;
+  }
+
   updateGame(dt, sim, ground) {
     this.time += dt;
+    if (this.capeOn) {
+      const lateral = dt > 0 ? (sim.x - this.prevX) / dt : 0;
+      this.cape.update(dt, { speed: sim.alive ? sim.v : 0, vy: sim.vy, lateral, rolling: sim.rollTime > 0, airborne: !sim.onGround || sim.jet === 'fly' || sim.jet === 'rise' });
+    }
+    this.prevX = sim.x;
     const hover = sim.powerups.active('hoverboard');
     this.group.position.set(sim.x, sim.y, -sim.s);
     const dx = (sim.targetLane * 2.5 - sim.x);
@@ -249,6 +275,7 @@ export class PlayerView {
   // Menu / studio : personnage seul.
   updateMenu(dt, anim = 'menu') {
     this.time += dt;
+    if (this.capeOn) this.cape.update(dt, { speed: anim === 'hoverboard' ? 8 : 0, menu: anim !== 'hoverboard' });
     this.boardHolder.visible = anim === 'hoverboard';
     if (this.board) this.board.position.y = 0.05 + Math.sin(this.time * 3) * 0.04;
     this.body.position.y = anim === 'hoverboard' ? 0.2 : 0;

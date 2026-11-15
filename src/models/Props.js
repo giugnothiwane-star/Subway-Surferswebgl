@@ -21,16 +21,23 @@ export function mat(name, params, Type = THREE.MeshStandardMaterial) {
 // Pièce épaisse : tranche crantée, rebord, symbole original en relief (éclair
 // stylisé dans un losange) sur les deux faces.
 export function coinGeometry({ symbol = true } = {}) {
+  // Deux groupes de matériaux : 0 = faces + rebords (+ symbole), 1 = tranche crantée.
   const pb = new PartBuilder();
   const gold = mat('Gold', { color: 0xffc23a, metalness: 1, roughness: 0.22, emissive: 0x3a2200, emissiveIntensity: 0.25 });
-  const prof = [
-    [0, 0.032], [0.27, 0.032], [0.3, 0.05], [0.37, 0.06], [0.4, 0.05], [0.405, 0.02], [0.405, -0.02], [0.4, -0.05], [0.37, -0.06], [0.3, -0.05], [0.27, -0.032], [0, -0.032],
-  ].map(([r, y]) => new THREE.Vector2(r, y));
-  pb.add(new THREE.LatheGeometry(prof.reverse(), 28), gold, { rotation: [Math.PI / 2, 0, 0] });
+  const edge = mat('CoinEdge', { color: 0xd9a21e, metalness: 1, roughness: 0.3 });
+  const V = (r, y) => new THREE.Vector2(r, y);
+  const SEG = 32;
+  // face avant (y>0), tranche, face arrière : trois tours pour séparer les matériaux
+  const top = [V(0, 0.032), V(0.27, 0.032), V(0.3, 0.05), V(0.37, 0.06), V(0.4, 0.05)];
+  const band = [V(0.4, 0.05), V(0.405, 0.02), V(0.405, -0.02), V(0.4, -0.05)];
+  const bottom = [V(0.4, -0.05), V(0.37, -0.06), V(0.3, -0.05), V(0.27, -0.032), V(0, -0.032)];
+  for (const [prof, m] of [[top, gold], [bottom, gold], [band, edge]]) {
+    pb.add(new THREE.LatheGeometry([...prof].reverse(), SEG), m, { rotation: [Math.PI / 2, 0, 0] });
+  }
   // crans de la tranche
   for (let i = 0; i < 24; i++) {
     const a = (i / 24) * Math.PI * 2;
-    pb.add(new THREE.BoxGeometry(0.02, 0.07, 0.03), gold, { position: [Math.cos(a) * 0.405, Math.sin(a) * 0.405, 0], rotation: [0, 0, a] });
+    pb.add(new THREE.BoxGeometry(0.02, 0.07, 0.03), edge, { position: [Math.cos(a) * 0.405, Math.sin(a) * 0.405, 0], rotation: [0, 0, a] });
   }
   // symbole : losange + éclair
   const bolt = new THREE.Shape();
@@ -45,7 +52,8 @@ export function coinGeometry({ symbol = true } = {}) {
     pb.add(new THREE.ExtrudeGeometry(bolt, opts), gold, { position: [0, 0, side * 0.03], rotation: [0, side < 0 ? Math.PI : 0, 0] });
     pb.add(new THREE.ExtrudeGeometry(ring, { ...opts, depth: 0.012 }), gold, { position: [0, 0, side * 0.03], rotation: [0, side < 0 ? Math.PI : 0, 0] });
   }
-  return { geometry: pb.buildGeometry(), material: gold };
+  const { geometry, materials } = pb.buildGrouped();
+  return { geometry, material: gold, materials };
 }
 
 // ---- Bonus -----------------------------------------------------------------

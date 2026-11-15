@@ -120,6 +120,7 @@
         <p class="muted small" id="s-perf">—</p>
         <label class="field">Saturation des couleurs : <b id="s-satval">100 %</b> <input type="range" id="s-saturation" min="0" max="2" step="0.05" /></label>
         <label class="toggle"><input type="checkbox" id="s-reduced" /> Réduire les mouvements de caméra</label>
+        <label class="toggle"><input type="checkbox" id="s-skinanim" /> Animations des skins (étoiles, flammes…)</label>
         <label class="toggle"><input type="checkbox" id="s-fps" /> Afficher les FPS</label>
         <h3>Commandes</h3>
         <label class="toggle"><input type="checkbox" id="s-touch" /> Boutons tactiles à l'écran</label>
@@ -150,35 +151,66 @@
     <!-- Studio -->
     <section id="studio" class="screen studio">
       <header class="subbar"><button class="back" data-nav="studio-exit" aria-label="Retour">‹</button><h2>Studio</h2>
-        <div class="segmented small" id="st-subject"><button data-subject="character" class="on">Perso</button><button data-subject="board">Board</button><button data-subject="coin">Pièce</button><button data-subject="train">Train</button></div>
+        <div class="segmented small" id="st-subject"><button data-subject="character" class="on">Perso</button><button data-subject="cape">Cape</button><button data-subject="board">Board</button><button data-subject="coin">Pièce</button><button data-subject="train">Train</button></div>
       </header>
       <p class="hint">Glisse pour tourner, pince ou molette pour zoomer.</p>
       <div class="studio-panel">
         <div class="tabs" id="st-tabs" role="tablist">
-          <button data-tab="look" class="on">Personnage</button><button data-tab="board">Hoverboard</button><button data-tab="coin">Pièces</button><button data-tab="train">Trains</button><button data-tab="light">Carte & lumière</button><button data-tab="model">Modèle 3D</button>
+          <button data-tab="skins" class="on">✦ Skins</button><button data-tab="look">Personnage</button><button data-tab="cape">Cape</button><button data-tab="board">Hoverboard</button><button data-tab="coin">Pièces</button><button data-tab="train">Trains</button><button data-tab="light">Carte & lumière</button><button data-tab="model">Modèle 3D</button>
         </div>
-        <div class="tabpane on" data-pane="look">
+        <div class="tabpane on" data-pane="skins">
+          <button class="btn primary galaxybtn" id="st-galaxyall">✦ APPLIQUER GALAXIE À L'ÉQUIPEMENT</button>
+          <p class="muted small">Personnage, vêtements, cape, pièces et hoverboard. Les trains, rails, décors et cartes ne changent jamais.</p>
+          <h3>Skin par catégorie</h3>
+          <div class="skinmatrix" id="st-skinmatrix"></div>
+          <button class="btn small ghost" id="st-skinsoff">Tout remettre en Normal</button>
+          <h3>Réglages Galaxie</h3>
+          <div class="colors" id="st-galcolors"></div>
+          <div id="st-galsliders" class="sliders"></div>
+          <label class="toggle"><input type="checkbox" id="st-galanim" /> Galaxie animée (décoché = statique)</label>
+          <button class="btn small ghost" id="st-galreset">Réglages Galaxie par défaut</button>
+        </div>
+        <div class="tabpane" data-pane="look">
+          <label class="field">Skin du personnage <select id="st-charskin" class="skinselect"></select></label>
+          <div class="segmented small" id="st-charmode" role="radiogroup" aria-label="Portée du skin"><button data-mode="full">Personnage complet</button><button data-mode="clothes">Vêtements seulement</button></div>
+          <label class="field" id="st-skintexrow">Image du skin « Texture perso » <input type="file" id="st-skinfile" accept="image/png,image/jpeg,image/webp" /></label>
           <label class="field">Coiffure <select id="st-hair"><option value="spiky">Pics</option><option value="short">Courte</option><option value="bun">Chignon</option><option value="mohawk">Crête</option><option value="long">Longue</option></select></label>
           <div class="colors" id="st-colors"></div>
           <div class="checks" id="st-acc"></div>
           <label class="field">Motif du sweat (PNG / JPG / WebP) <input type="file" id="st-shirtfile" accept="image/png,image/jpeg,image/webp" /></label>
           <button class="btn small ghost" data-clear="shirt">Retirer le motif</button>
         </div>
+        <div class="tabpane" data-pane="cape">
+          <label class="toggle"><input type="checkbox" id="st-capeon" /> Porter une cape</label>
+          <label class="field">Skin de la cape <select id="st-capeskin" class="skinselect"></select></label>
+          <div class="colors"><label>Couleur <input type="color" id="st-capecolor" /></label></div>
+          <label class="field">Image de la cape (PNG / JPG / WebP) <input type="file" id="st-capefile" accept="image/png,image/jpeg,image/webp" /></label>
+          <button class="btn small ghost" data-clear="cape">Retirer l'image</button>
+          <p class="muted small">La cape suit tes mouvements : elle se soulève en courant, flotte dans les sauts et s'enroule pendant les roulades.</p>
+        </div>
         <div class="tabpane" data-pane="board">
+          <label class="field">Skin du hoverboard <select id="st-boardskin" class="skinselect"></select></label>
           <label class="field">Modèle <select id="st-boardstyle"></select></label>
           <div class="colors"><label>Couleur <input type="color" id="st-bc1" /></label><label>Liseré <input type="color" id="st-bc2" /></label></div>
           <label class="field">Image du dessus <input type="file" id="st-boardfile" accept="image/png,image/jpeg,image/webp" /></label>
           <button class="btn small ghost" data-clear="board">Retirer l'image</button>
         </div>
         <div class="tabpane" data-pane="coin">
-          <p class="field">Texture de la pièce (fond retiré, seul l'animal apparaît)</p>
+          <label class="field">Skin des pièces <select id="st-coinskin" class="skinselect"></select></label>
+          <p class="field">Image des faces (avant et arrière)</p>
           <div id="st-coinskins" class="skins" role="radiogroup" aria-label="Textures de pièces"></div>
           <div class="colors"><label>Teinte de l'or <input type="color" id="st-coin" /></label></div>
           <label class="toggle"><input type="checkbox" id="st-glowon" /> Lueur autour des pièces</label>
           <div class="colors"><label>Couleur de la lueur <input type="color" id="st-glow" /></label></div>
           <label class="field">Intensité de la lueur <input type="range" id="st-glowint" min="0.1" max="1" step="0.05" /></label>
-          <label class="field">Image de face (PNG / JPG / WebP) <input type="file" id="st-coinfile" accept="image/png,image/jpeg,image/webp" /></label>
+          <label class="field">Importer ma propre image (PNG / JPG / WebP) <input type="file" id="st-coinfile" accept="image/png,image/jpeg,image/webp" /></label>
           <button class="btn small ghost" data-clear="coin">Retirer l'image</button>
+          <h3>Cadrage de l'image</h3>
+          <div class="segmented small" id="st-coinfit" role="radiogroup" aria-label="Cadrage"><button data-fit="contain">Contenir (image entière)</button><button data-fit="cover">Couvrir (remplit)</button></div>
+          <div id="st-coinsliders" class="sliders"></div>
+          <h3>Matière</h3>
+          <div class="colors"><label>Couleur de la tranche <input type="color" id="st-coinedge" /></label></div>
+          <div id="st-coinpbr" class="sliders"></div>
         </div>
         <div class="tabpane" data-pane="train">
           <label class="toggle"><input type="checkbox" id="st-trainon" /> Utiliser ma livrée</label>

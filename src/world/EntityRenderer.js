@@ -5,6 +5,7 @@ import { laneX } from '../gameplay/constants.js';
 import { trainFront } from '../gameplay/obstacles.js';
 import { TrainFactory } from '../models/Trains.js';
 import { barrierHighModel, barrierLowModel, coinGeometry, coinGlowMaterial, powerupModel, rampModel, sharedMaterials } from '../models/Props.js';
+import { DEFAULT_COIN, coinFaceGeometry, coinFaceMaterial, coinMaterials, coinUsesImage, composeCoinFace } from '../skins/CoinFactory.js';
 import { makeTexture } from '../models/textures.js';
 
 const COIN_CAP = 700;
@@ -58,7 +59,7 @@ export class EntityRenderer {
     // pièces
     const coin = coinGeometry();
     this.coinMaterial = coin.material;
-    this.coins = new THREE.InstancedMesh(coin.geometry, coin.material, COIN_CAP);
+    this.coins = new THREE.InstancedMesh(coin.geometry, coin.materials, COIN_CAP);
     this.coins.name = 'Coins';
     this.coins.frustumCulled = false;
     this.coins.castShadow = profile.shadows;
@@ -83,62 +84,64 @@ export class EntityRenderer {
   // Personnalisations du studio : teinte des pièces, image de pièce, livrée de train.
   applyCustom(custom = {}) {
     this.custom = custom;
-    if (custom.coinTint) this.coinMaterial.color.set(custom.coinTint);
-    else this.coinMaterial.color.set(0xffc23a);
-    // lueur : halo + reflet lumineux de la couleur choisie
+    this.applyCoins(custom);
+    // trains : reconstruits seulement si LEUR personnalisation a changé
+    // (le skin Galaxie global ne les concerne jamais)
+    const tl = custom.trainLivery || {};
+    const trainSig = `${tl.enabled}|${tl.body}|${tl.stripe}|${tl.accent}|${custom.trainTexture?.uuid || ''}`;
+    if (trainSig !== this.trainSig) {
+      if (this.trainSig !== undefined) {
+        for (const [id, v] of this.visuals) if (v.kind === 'train') { v.release(); this.visuals.delete(id); }
+        this.trains.dispose();
+        this.trains = new TrainFactory();
+      }
+      this.trainSig = trainSig;
+    }
+  }
+
+  // Pièces : skin, image (faces avant/arrière), tranche, PBR, lueur.
+  applyCoins(custom) {
+    const cfg = { ...DEFAULT_COIN, ...(custom.coin || {}) };
+    const useImg = coinUsesImage(cfg, custom.coinTexture);
+    const mats = coinMaterials(cfg, custom.coinTint);
+    this.coins.material = mats;
+    this.coinMaterial = mats[0];
+    // lueur : halo + reflet lumineux de la couleur choisie (pièces normales)
     const glow = custom.coinGlow;
     const on = !!(glow && glow.enabled);
     this.coinGlow.visible = on;
     if (on) {
       this.coinGlow.material.uniforms.uColor.value.set(glow.color);
       this.coinGlow.material.uniforms.uIntensity.value = glow.intensity;
-      this.coinMaterial.emissive.set(glow.color);
-      this.coinMaterial.emissiveIntensity = 0.05 + glow.intensity * 0.3;
-    } else {
-      this.coinMaterial.emissive.set(0x3a2200);
-      this.coinMaterial.emissiveIntensity = 0.25;
     }
+    if (!mats[0].userData.skin) {
+      mats[0].emissive.set(on ? glow.color : 0x3a2200);
+      mats[0].emissiveIntensity = on ? 0.05 + glow.intensity * 0.3 : 0.25;
+    }
+    // géométrie sans symbole gravé quand une image couvre la face
+    if (!this.coinGeos) this.coinGeos = { symbol: this.coins.geometry, plain: null };
+    if (useImg && !this.coinGeos.plain) this.coinGeos.plain = coinGeometry({ symbol: false }).geometry;
+    this.coins.geometry = useImg ? this.coinGeos.plain : this.coinGeos.symbol;
+    this.coinScale = useImg || cfg.skin !== 'normal' ? 1.3 : 1; // plus grandes pour bien voir le motif
+    // faces image : une seule texture GPU partagée par toutes les pièces
+    const faceSig = useImg ? `${custom.coinTexture.uuid}|${cfg.fit}|${cfg.zoom}|${cfg.offsetX}|${cfg.offsetY}|${cfg.rotation}|${cfg.roughness}|${cfg.metalness}|${cfg.shine}` : '';
+    if (faceSig === this.faceSig) return;
+    this.faceSig = faceSig;
     if (this.coinFaces) {
       this.group.remove(this.coinFaces);
-      this.coinFaces.geometry.dispose();
+      this.coinFaces.material.map?.dispose();
       this.coinFaces.material.dispose();
+      this.coinFaces.dispose();
       this.coinFaces = null;
     }
-    // pièce sans symbole gravé quand une image recouvre la face
-    if (!this.coinGeos) this.coinGeos = { symbol: this.coins.geometry, plain: null };
-    if (custom.coinTexture) {
-      if (!this.coinGeos.plain) this.coinGeos.plain = coinGeometry({ symbol: false }).geometry;
-      this.coins.geometry = this.coinGeos.plain;
-    } else this.coins.geometry = this.coinGeos.symbol;
-    // pièces un peu plus grandes avec une photo, pour bien la voir (visuel seulement)
-    this.coinScale = custom.coinTexture ? 1.3 : 1;
-    if (custom.coinTexture) {
-      // la photo couvre toute la face (seul un fin liseré doré reste visible)
-      const g = new THREE.CircleGeometry(0.375, 48);
-      const back = new THREE.CircleGeometry(0.375, 48);
-      back.rotateY(Math.PI);
-      back.translate(0, 0, -0.062);
-      g.translate(0, 0, 0.062);
-      const merged = new THREE.BufferGeometry();
-      // fusion manuelle simple (deux disques)
-      const pos = [...g.attributes.position.array, ...back.attributes.position.array];
-      const nor = [...g.attributes.normal.array, ...back.attributes.normal.array];
-      const uv = [...g.attributes.uv.array, ...back.attributes.uv.array];
-      const idx = [...g.index.array, ...back.index.array.map((i) => i + g.attributes.position.count)];
-      merged.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      merged.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-      merged.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-      merged.setIndex(idx);
-      g.dispose(); back.dispose();
-      this.coinFaces = new THREE.InstancedMesh(merged, new THREE.MeshStandardMaterial({ map: custom.coinTexture, emissive: 0xffffff, emissiveMap: custom.coinTexture, emissiveIntensity: 0.35, roughness: 0.5, metalness: 0.05, alphaTest: 0.4, side: THREE.DoubleSide }), COIN_CAP);
-      this.coinFaces.instanceMatrix = this.coins.instanceMatrix; // mêmes matrices que les pièces
-      this.coinFaces.frustumCulled = false;
-      this.group.add(this.coinFaces);
-    }
-    // les livrées personnalisées imposent de reconstruire les modèles de trains
-    this.trains.dispose();
-    this.trains = new TrainFactory();
-    for (const [id, v] of this.visuals) if (v.kind === 'train') { v.obj.parent?.remove(v.obj); this.visuals.delete(id); }
+    if (!useImg) return;
+    if (!this.faceGeo) this.faceGeo = coinFaceGeometry();
+    const tex = composeCoinFace(custom.coinTexture.image, cfg);
+    this.coinFaces = new THREE.InstancedMesh(this.faceGeo, coinFaceMaterial(tex, cfg), COIN_CAP);
+    this.coinFaces.instanceMatrix = this.coins.instanceMatrix; // mêmes matrices que les pièces
+    this.coinFaces.count = this.coins.count;
+    this.coinFaces.frustumCulled = false;
+    this.group.add(this.coinFaces);
   }
 
   makeFlare() {
@@ -410,5 +413,6 @@ export class EntityRenderer {
     this.coins.dispose();
     this.coinGlow.dispose();
     this.coinFaces?.dispose();
+    this.faceGeo?.dispose();
   }
 }

@@ -13,7 +13,7 @@ const ui = new UI();
 async function restoreCustomFiles(game, storage) {
   const files = storage.data.studio.files;
   const custom = {};
-  const slots = { shirt: 'shirtTexture', board: 'boardTexture', coin: 'coinTexture', train: 'trainTexture' };
+  const slots = { shirt: 'shirtTexture', board: 'boardTexture', coin: 'coinTexture', train: 'trainTexture', skin: 'skinTexture', cape: 'capeTexture' };
   // images héritées du prototype (data URL dans localStorage) -> IndexedDB
   for (const [slot, dataUrl] of Object.entries(storage.legacyImages || {})) {
     try {
