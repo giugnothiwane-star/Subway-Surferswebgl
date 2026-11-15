@@ -9,6 +9,8 @@ import { UI } from './ui/UI.js';
 import '@fontsource/orbitron/latin-700.css';
 import '@fontsource/orbitron/latin-900.css';
 import { Controls } from './gameplay/Controls.js';
+import { Owner } from './core/Owner.js';
+import { SharedContent, siteKeyFromBase } from './core/SharedContent.js';
 
 const ui = new UI();
 
@@ -99,6 +101,24 @@ async function main() {
   game.setSaturation(storage.data.settings.saturation);
   controls.bindButtons(document.getElementById('hud'));
   game.controls = controls;
+  // Image de pièce partagée par le propriétaire (lien privé seulement) : lue
+  // avant d'afficher le menu pour éviter tout changement visible, puis vérifiée
+  // toutes les 30 s et appliquée à chaud.
+  const owner = new Owner();
+  const shared = new SharedContent({
+    siteKey: siteKeyFromBase(import.meta.env.BASE_URL),
+    onImage: async (blob) => {
+      const tex = blob ? await assets.imageTexture(blob) : null;
+      game.setSharedCoin(tex);
+      ui.sharedChanged(!!blob);
+    },
+  });
+  ui.attachOwner(owner, shared);
+  if (shared.enabled) {
+    ui.boot(0.9, 'Contenu partagé…');
+    await Promise.race([shared.check(), new Promise((r) => setTimeout(r, 2500))]);
+    shared.start();
+  }
   ui.boot(1, 'Prêt !');
   ui.showScreen('menu');
   for (const w of storage.warnings) ui.toast(w);
@@ -107,7 +127,7 @@ async function main() {
   window.addEventListener('pointerdown', unlock, { passive: true });
   window.addEventListener('keydown', unlock);
   // Point d'accès de diagnostic (tests automatisés)
-  window.__MNNROW = { game, storage, ui, info: () => game.debugInfo() };
+  window.__MNNROW = { game, storage, ui, owner, shared, info: () => game.debugInfo() };
 }
 
 main().catch((e) => {

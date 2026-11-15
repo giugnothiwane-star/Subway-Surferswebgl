@@ -241,6 +241,31 @@ le jeu ; le code source reste public sur GitHub (le dépôt est public). Les pag
 moteurs de recherche. Pour une vraie protection par compte, il faudrait un dépôt privé avec une offre GitHub
 payante (Pages privées) ou un autre hébergeur avec authentification.
 
+### Mode propriétaire : une image de pièce pour tout le monde
+
+1. **Paramètres → Propriétaire** : entre ton code propriétaire puis **Déverrouiller**
+   (5 essais libres, puis attente croissante : 30 s, 1 min, 2 min… jusqu'à 1 h).
+2. Une seule fois, crée un **jeton GitHub** :
+   github.com → photo de profil → **Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token** ; *Repository access* : **Only select repositories →
+   Subway-Surferswebgl** ; *Permissions → Repository permissions → Contents* : **Read and write**.
+   Colle-le dans **Paramètres → Propriétaire → Jeton GitHub** puis **Enregistrer le jeton**.
+3. **Studio → Pièce → Ajouter une image** : choisis l'image, puis **Pour moi** ou **Pour tout le monde**.
+
+Ce qui se passe avec « Pour tout le monde » :
+- l'image est réduite (512 px), ré-encodée sans métadonnées (pas de position GPS), puis **chiffrée**
+  (AES-GCM 256) avec une clé dérivée de la clé secrète du lien privé ;
+- elle est envoyée dans la branche `contenu-partage` du dépôt : sur GitHub, on ne voit qu'un fichier
+  illisible ;
+- chaque joueur sur le lien privé vérifie toutes les 30 s et remplace la texture des pièces **à chaud,
+  sans recharger la page**.
+
+Sécurité, honnêtement : le code propriétaire n'est **pas** dans le code source (seulement une empreinte
+PBKDF2 de 400 000 itérations). Mais un site statique ne peut pas cacher totalement un code de 7 chiffres :
+le vrai verrou est le **jeton GitHub**, qui n'existe que sur ton appareil (chiffré avec ton code). Sans ce
+jeton, connaître ou deviner le code ne permet de rien publier. Ne partage jamais ton jeton ; tu peux le
+révoquer à tout moment sur GitHub.
+
 Les images personnelles ajoutées dans **Studio → Pièces → Mes images** restent dans le navigateur de
 l'appareil (IndexedDB) : elles ne sont jamais envoyées sur GitHub ni sur le site.
 

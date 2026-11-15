@@ -413,6 +413,83 @@ await check('Mes images : deux images locales, choix, rechargement, suppression'
   return 'images ajoutées, conservées après rechargement, supprimées proprement';
 });
 
+await check('Propriétaire : mauvais code refusé ; image « pour tout le monde » chiffrée et reçue par un autre joueur sans rechargement', async () => {
+  // GitHub simulé (aucun appel réel) : une branche, un fichier, des commits
+  const gh = { head: null, file: null, fileSha: null, puts: [] };
+  const handler = async (route) => {
+    const req = route.request();
+    const url = req.url();
+    const m = req.method();
+    const reply = (status, body) => route.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body || {}) });
+    if (m === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
+    if (url.includes('/commits/contenu-partage')) return gh.head ? reply(200, { sha: gh.head }) : reply(404);
+    if (url.startsWith('https://raw.githubusercontent.com/')) return gh.file ? route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, body: gh.file }) : reply(404);
+    if (url.includes('/git/ref/heads/contenu-partage')) return gh.head ? reply(200, { object: { sha: gh.head } }) : reply(404);
+    if (url.includes('/git/ref/heads/main')) return reply(200, { object: { sha: 'main0' } });
+    if (url.includes('/git/refs')) { gh.head = 'b0'; return reply(201, {}); }
+    if (url.includes('/contents/partage/piece.bin')) {
+      if (m === 'GET') return gh.fileSha ? reply(200, { sha: gh.fileSha }) : reply(404);
+      const body = JSON.parse(req.postData());
+      gh.puts.push({ auth: req.headers().authorization, branch: body.branch });
+      if (m === 'PUT') { gh.file = Buffer.from(body.content, 'base64'); gh.fileSha = 'f' + gh.puts.length; gh.head = 'c' + gh.puts.length; return reply(200, { commit: { sha: gh.head } }); }
+      if (m === 'DELETE') { gh.file = null; gh.fileSha = null; gh.head = 'd' + gh.puts.length; return reply(200, { commit: { sha: gh.head } }); }
+    }
+    return reply(500);
+  };
+  await ctx.route('https://api.github.com/**', handler);
+  await ctx.route('https://raw.githubusercontent.com/**', handler);
+  try {
+    // 1. mauvais code : refusé, interface propriétaire cachée
+    await page.click('[data-nav="settings"]');
+    await page.fill('#s-ownercode', '0000000');
+    await page.click('#s-ownerunlock');
+    await waitFor(() => /incorrect/.test(document.getElementById('s-ownermsg').textContent), null, 30000);
+    const hidden = await page.evaluate(() => document.getElementById('s-owner-open').classList.contains('hidden'));
+    await page.click('#settings [data-nav="back"]');
+    // 2. propriétaire (état déverrouillé simulé : le vrai code n'est écrit nulle part dans les tests)
+    const KEY = 'TestCleDuSite_1234567';
+    await game((k) => { const { owner, shared } = window.__MNNROW; owner.code = '135790'; owner.unlocked = true; owner.emit(); shared.siteKey = k; }, KEY);
+    await game(() => window.__MNNROW.owner.saveToken('github_pat_' + 'T'.repeat(40)));
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    await page.click('[data-nav="studio"]');
+    await page.locator('#st-tabs [data-tab="coin"]').click();
+    await page.setInputFiles('#st-coinfile', { name: 'partage.png', mimeType: 'image/png', buffer: png });
+    await waitFor(() => !document.getElementById('st-sharechoice').classList.contains('hidden'), null, 10000);
+    await page.click('#st-shareall');
+    await waitFor(() => /tout le monde/.test(document.getElementById('st-msg').textContent), null, 30000);
+    const ownerMsg = await page.textContent('#st-msg');
+    await leaveStudio();
+    assert(gh.puts.length === 1 && gh.puts[0].branch === 'contenu-partage' && /^Bearer github_pat_/.test(gh.puts[0].auth), JSON.stringify(gh.puts));
+    assert(gh.file && gh.file.subarray(0, 4).toString() === 'MNS1' && !gh.file.includes(Buffer.from('WEBP')), 'fichier publié non chiffré');
+    // 3. autre joueur (autre onglet) : reçoit l'image sans recharger la page
+    const visitor = await ctx.newPage();
+    await visitor.goto(BASE);
+    await visitor.waitForFunction(() => window.__MNNROW && document.getElementById('menu').classList.contains('active'), null, { timeout: 120000 });
+    let navigations = 0;
+    visitor.on('framenavigated', () => { navigations++; });
+    const before = await visitor.evaluate(() => !!window.__MNNROW.game.sharedCoinTexture);
+    await visitor.evaluate(async (k) => { const s = window.__MNNROW.shared; s.siteKey = k; await s.check(); }, KEY);
+    const after = await visitor.evaluate(() => { const g = window.__MNNROW.game; return { tex: !!g.sharedCoinTexture, faces: !!g.entities.coinFaces }; });
+    // 4. retrait par le propriétaire -> retiré chez l'autre joueur, toujours sans recharger
+    await page.click('[data-nav="studio"]');
+    await page.locator('#st-tabs [data-tab="coin"]').click();
+    await page.click('#st-shareremove');
+    await waitFor(() => /retirée/.test(document.getElementById('st-msg').textContent), null, 30000);
+    await leaveStudio();
+    await visitor.evaluate(() => window.__MNNROW.shared.check());
+    const removed = await visitor.evaluate(() => !window.__MNNROW.game.sharedCoinTexture);
+    await visitor.close();
+    await game(() => { const { owner, shared } = window.__MNNROW; owner.forgetToken(); owner.lock(); shared.siteKey = null; window.__MNNROW.game.setSharedCoin(null); });
+    assert(hidden, 'interface propriétaire visible avec un mauvais code');
+    assert(!before && after.tex && after.faces && removed && navigations === 0, JSON.stringify({ before, after, removed, navigations }));
+    return `mauvais code refusé ; publié chiffré (MNS1) ; reçu par l'autre joueur sans rechargement ; retrait propagé (${ownerMsg.trim().slice(0, 40)}…)`;
+  } finally {
+    await ctx.unroute('https://api.github.com/**', handler);
+    await ctx.unroute('https://raw.githubusercontent.com/**', handler);
+    await leaveStudio();
+  }
+});
+
 await check('19. Redimensionnement / orientation paysage', async () => {
   await page.setViewportSize({ width: 915, height: 412 });
   await wait(700);
@@ -533,7 +610,8 @@ await check('24. Performances (rendu logiciel SwiftShader, non représentatif d\
 
 await check('22/23. Aucune erreur JS critique ni ressource manquante', async () => {
   const critical = pageErrors.filter((e) => !/ResizeObserver/.test(e));
-  const missing = failedRequests.filter((u) => !u.includes('favicon'));
+  // les 404 de GitHub simulé (aucune image partagée au départ) sont attendus
+  const missing = failedRequests.filter((u) => !u.includes('favicon') && !/api\.github\.com|raw\.githubusercontent\.com/.test(u));
   assert(!critical.length, critical.join(' | '));
   assert(!missing.length, missing.join(' | '));
   return `${consoleErrors.length} message(s) console.error (attendus : ${consoleErrors.slice(0, 3).join(' | ') || 'aucun'})`;

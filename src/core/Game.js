@@ -149,7 +149,21 @@ export class Game {
   // Réglages du studio transmis au rendu des entités (pièces, trains).
   entityCustom() {
     const st = this.save.studio;
-    return { coinTint: st.coinTint, coinGlow: st.coinGlow, coin: this.save.skins.coin, coinTexture: this.custom.coinTexture, trainLivery: st.trainLivery, trainTexture: this.custom.trainTexture };
+    return { coinTint: st.coinTint, coinGlow: st.coinGlow, coin: this.save.skins.coin, coinTexture: this.coinTexture(), trainLivery: st.trainLivery, trainTexture: this.custom.trainTexture };
+  }
+
+  // L'image partagée par le propriétaire passe avant le choix personnel.
+  coinTexture() {
+    return this.sharedCoinTexture || this.custom.coinTexture || null;
+  }
+
+  // Remplace la texture des pièces à chaud (aucun rechargement de la page).
+  setSharedCoin(tex) {
+    const old = this.sharedCoinTexture;
+    this.sharedCoinTexture = tex || null;
+    this.entities?.applyCustom(this.entityCustom());
+    if (this.state === 'studio' && this.studioSubject === 'coin') this.setStudioSubject('coin');
+    if (old && old !== tex) old.dispose();
   }
 
   applyCustom(custom) {
@@ -493,7 +507,7 @@ export class Game {
     if (subject === 'coin') {
       // même usine de matériaux que le jeu : l'aperçu montre exactement le rendu en course
       const cfg = { ...this.save.skins.coin, tint: this.save.studio.coinTint };
-      const coin = buildCoinPreview(cfg, this.custom.coinTexture, this.save.studio.coinGlow);
+      const coin = buildCoinPreview(cfg, this.coinTexture(), this.save.studio.coinGlow);
       coin.scale.setScalar(1.7);
       this.studioGlow = coin.userData.glowMaterial || null;
       coin.position.set(0, 1.5, 0);

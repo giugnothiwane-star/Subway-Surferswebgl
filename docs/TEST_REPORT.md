@@ -183,6 +183,20 @@ téléphone : la vérification à 60 FPS reste à faire sur un appareil réel.
   retour au menu garanti entre les tests, galerie remise à zéro, champ de vision mesuré sur sa valeur cible.
   Le site n'a pas été publié pendant ce temps (c'est le comportement voulu).
 
+### Mode propriétaire et image partagée (15 novembre 2026)
+
+- **47/47 tests Node** (7 nouveaux) :
+  - empreinte du code, verrouillage progressif, jeton chiffré ;
+  - chiffrement de l'image, clé tirée du lien privé ;
+  - publication, réception et retrait avec un faux GitHub ;
+  - le code en clair n'apparaît pas dans le source.
+- **35/35 vérifications navigateur**, dont une nouvelle :
+  - mauvais code refusé ;
+  - publication chiffrée (fichier commençant par `MNS1`, sans octet d'image en clair) ;
+  - un second onglet reçoit l'image **sans rechargement** (0 navigation), puis le retrait.
+- GitHub est **simulé** dans ces tests : la vraie publication n'a pas pu être essayée ici (pas de jeton,
+  et le réseau de cet environnement bloque github.io / l'API d'écriture).
+
 ## 3. Ce qui n'a PAS pu être testé ici
 
 - **Téléphone Android réel** : performances, chaleur, gestes, Samsung Internet. Aucun appareil disponible.
