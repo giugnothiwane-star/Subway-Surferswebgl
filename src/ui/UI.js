@@ -880,11 +880,39 @@ export class UI {
     }
   }
 
+  // Chiffres du chrono dans des cellules de largeur fixe (la police n'a pas de
+  // chiffres à chasse fixe : sans cela le chrono « tremble » et l'afficheur LCD
+  // en filigrane ne s'aligne pas). textContent reste lisible (« 00:12 »).
+  setDigits(id, str, force = false) {
+    if (!force && this.hudCache[id] === str) return;
+    this.hudCache[id] = str;
+    const el = $(id);
+    const cells = el.children;
+    if (cells.length === str.length) {
+      for (let i = 0; i < str.length; i++) if (cells[i].textContent !== str[i]) cells[i].textContent = str[i];
+      return;
+    }
+    el.replaceChildren(...[...str].map((c) => h('i', { class: /\d/.test(c) ? 'd' : 'sep', text: c })));
+  }
+
+  // Aiguille du cadran (un tour par minute) et barre des secondes, au dixième près.
+  chronoDial(prefix, t) {
+    const tenth = Math.floor((Number(t) || 0) * 10);
+    const key = `${prefix}-dial`;
+    if (this.hudCache[key] === tenth) return;
+    this.hudCache[key] = tenth;
+    const sec = (tenth / 10) % 60;
+    $(`${prefix}-hand`)?.setAttribute('transform', `rotate(${(sec * 6).toFixed(1)} 12 13.6)`);
+    const bar = $(`${prefix}-bar`);
+    if (bar) bar.style.transform = `scaleX(${(sec / 60).toFixed(4)})`;
+  }
+
   updateHUD(sim, save) {
     // chrono de course : s'arrête à la chute (le temps de simulation ne progresse plus)
     const ct = chronoParts(sim.time);
-    this.setText('h-time', ct.main);
-    this.setText('h-time-cs', ct.cs);
+    this.setDigits('h-time', ct.main);
+    this.setDigits('h-time-cs', ct.cs);
+    this.chronoDial('h', sim.time);
     if (this.hudCache.dead !== !sim.alive) {
       this.hudCache.dead = !sim.alive;
       const box = $('h-chrono');
@@ -939,8 +967,9 @@ export class UI {
     $('go-coins').textContent = fmt(r.coins);
     $('go-best').textContent = fmt(r.best);
     const ct = chronoParts(r.time);
-    $('go-time').textContent = ct.main;
-    $('go-time-cs').textContent = ct.cs;
+    this.setDigits('go-time', ct.main, true);
+    this.setDigits('go-time-cs', ct.cs, true);
+    this.chronoDial('go', r.time);
     $('go-seed').textContent = r.seed;
     const lines = [];
     for (const d of r.finished) lines.push(h('div', { text: `★ Mission réussie : ${d.label} (+${d.reward})` }));

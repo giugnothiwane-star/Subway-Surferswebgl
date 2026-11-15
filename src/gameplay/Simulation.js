@@ -312,14 +312,11 @@ export class Simulation {
           this.land(box.y1);
           continue;
         }
-        if (this.invuln > 0 && wasS && wasX) {
-          // Fin d'invulnérabilité à l'intérieur d'un train : on remonte sur le toit.
-          this.land(box.y1);
-          continue;
-        }
-        if (!wasS) this.hit(e, 'front');
-        else if (!wasX) this.stumble(e);
-        else this.hit(e, 'front');
+        if (wasS && !wasX) { this.stumble(e); if (!this.alive) return; continue; }
+        // Choc de face : un train reste TOUJOURS solide. Si le choc est absorbé
+        // (bouclier, hoverboard, Zen, invulnérabilité), on rebondit sur le toit
+        // au lieu de traverser le wagon.
+        if (this.hit(e, 'front', { ghost: false })) this.vault(box.y1);
       } else {
         if (wasS && !wasX) this.stumble(e);
         else this.hit(e, e.type === 'low' ? 'barrierLow' : 'barrierHigh');
@@ -342,31 +339,33 @@ export class Simulation {
     }
   }
 
-  hit(e, cause) {
-    if (this.invuln > 0) return;
-    if (this.powerups.active('shield')) {
-      this.powerups.cancel('shield');
+  // Renvoie true si le choc est absorbé (le joueur reste en vie).
+  // `ghost` : l'obstacle devient traversable (barrières brisées) ; jamais pour un train.
+  hit(e, cause, { ghost = true } = {}) {
+    if (this.invuln > 0) return true;
+    let absorbed = null;
+    if (this.powerups.active('shield')) { this.powerups.cancel('shield'); absorbed = 'shieldBreak'; }
+    else if (this.powerups.active('hoverboard')) { this.powerups.cancel('hoverboard'); absorbed = 'hoverBreak'; }
+    else if (this.zen) absorbed = 'zenHit';
+    if (absorbed) {
       this.invuln = PLAYER.invulnAfterHit;
-      e.ghost = true;
-      this.emit('shieldBreak');
-      return;
-    }
-    if (this.powerups.active('hoverboard')) {
-      this.powerups.cancel('hoverboard');
-      this.invuln = PLAYER.invulnAfterHit;
-      e.ghost = true;
-      this.emit('hoverBreak');
-      return;
-    }
-    if (this.zen) {
-      this.invuln = PLAYER.invulnAfterHit;
-      e.ghost = true;
-      this.emit('zenHit');
-      return;
+      if (ghost) e.ghost = true;
+      this.emit(absorbed);
+      return true;
     }
     this.alive = false;
     this.deathCause = cause;
     this.emit('crash', { cause, kind: e.kind });
+    return false;
+  }
+
+  // Rebond sur le toit d'un train après un choc absorbé.
+  vault(top) {
+    this.y = top;
+    this.vy = jumpVelocity(0.7);
+    this.onGround = false;
+    this.rollTime = 0;
+    this.emit('vault', { height: top });
   }
 
   collect(dt) {

@@ -181,3 +181,37 @@ test('chronos : durée figée à la chute, temps entre deux pièces mesuré', ()
   assert.ok(Math.abs(sim.lastCoinGap - 28 / 14) < 0.2, `écart ${sim.lastCoinGap}`);
   assert.ok(sim.summary().longestNoCoin >= sim.lastCoinGap);
 });
+
+test('choc de face absorbé (bouclier, hoverboard, Zen) : on rebondit sur le toit, jamais à travers le train', () => {
+  const train = () => ({ kind: 'train', lane: 0, s: 30, length: 28, cars: 2, moving: false, k: 0 });
+  const setups = {
+    bouclier: (sim) => sim.powerups.activate('shield'),
+    hoverboard: (sim) => { sim.input('board'); sim.step(SIM_DT); },
+    zen: () => {},
+  };
+  for (const [name, setup] of Object.entries(setups)) {
+    const sim = scenario([train()], { zen: name === 'zen' });
+    setup(sim);
+    let inside = 0;
+    runUntil(sim, 70, (s) => {
+      // jamais à l'intérieur du volume du wagon
+      if (s.s > 30.4 && s.s < 57.6 && Math.abs(s.x) < 1.5 && s.y < TRAIN.height - 0.05 && s.y + 1 > 0) inside++;
+    });
+    assert.equal(sim.alive, true, name);
+    assert.equal(inside, 0, `${name} : ${inside} pas à l'intérieur du train`);
+    assert.equal(sim.generator.entities[0].ghost, undefined, `${name} : le train reste solide`);
+    assert.ok(events(sim).includes('vault'), name);
+  }
+  // sans protection : fin de partie
+  assert.equal(runUntil(scenario([train()]), 70).deathCause, 'front');
+});
+
+test('train mobile de face avec hoverboard : rebond sur le toit puis fin du wagon', () => {
+  const sim = scenario([{ kind: 'train', lane: 0, s: 60, length: 28, cars: 2, moving: true, k: 0.6 }]);
+  sim.input('board');
+  sim.step(SIM_DT);
+  let maxY = 0;
+  runUntil(sim, 120, (s) => { maxY = Math.max(maxY, s.y); });
+  assert.equal(sim.alive, true);
+  assert.ok(maxY >= TRAIN.height, `hauteur max ${maxY}`);
+});

@@ -342,6 +342,7 @@ export class Game {
       case 'hoverBreak': a.play('hoverBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 0.3, pp.z, { count: 26, speed: 5, color: 0x65d9ff, size: 0.35, life: 0.6 }); break;
       case 'shieldBreak': a.play('shieldBreak'); this.ui.vibrate(60); this.rig.addShake(0.6); this.particles.emit(pp.x, pp.y + 1, pp.z, { count: 30, speed: 6, color: 0x59c8ff, size: 0.35, life: 0.6 }); break;
       case 'zenHit': a.play('stumble'); this.rig.addShake(0.4); break;
+      case 'vault': a.play('jump'); this.rig.addShake(0.35); this.particles.emit(pp.x, pp.y, pp.z, { count: 16, speed: 3.5, color: 0xffffff, size: 0.3, life: 0.45 }); break;
     }
   }
 

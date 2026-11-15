@@ -170,6 +170,7 @@ export class PlayerView {
       case 'jump': case 'superJump': this.lock = 0; this.play('jump', 0.08); break;
       case 'land': if (!ev.height || ev.hard) { this.landTimer = 0.22; } break;
       case 'stumble': this.state = null; this.play('hit', 0.06); this.lock = 0.45; break;
+      case 'vault': this.vaultT = 0; this.vaultFrom = this.group.position.y; this.lock = 0; this.play('jump', 0.06); break;
       case 'crash': this.play('death', 0.1); this.lock = 99; break;
       case 'hoverBreak': this.boardFade = 1; break;
       case 'shieldBreak': this.shieldFade = 1; break;
@@ -204,6 +205,13 @@ export class PlayerView {
     this.prevX = sim.x;
     const hover = sim.powerups.active('hoverboard');
     this.group.position.set(sim.x, sim.y, -sim.s);
+    // rebond sur un toit après un choc absorbé : montée lissée sur 0,22 s
+    if (this.vaultT !== undefined && this.vaultT < 0.22) {
+      this.vaultT += dt;
+      const k = Math.min(1, this.vaultT / 0.22);
+      const e = k * k * (3 - 2 * k);
+      this.group.position.y = this.vaultFrom + (sim.y - this.vaultFrom) * e;
+    }
     const dx = (sim.targetLane * 2.5 - sim.x);
     this.body.rotation.y = Math.PI - Math.max(-0.35, Math.min(0.35, dx * 0.12));
     this.chooseBase(sim, dt);
@@ -301,6 +309,7 @@ export class PlayerView {
     this.landTimer = 0;
     this.boardFade = 0;
     this.shieldFade = 0;
+    this.vaultT = undefined;
     this.body.position.y = 0;
     this.body.visible = true;
   }

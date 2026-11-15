@@ -394,6 +394,25 @@ await check('19. Redimensionnement / orientation paysage', async () => {
   return `aspect ${r.a.toFixed(2)}`;
 });
 
+await check('Caméra : champ de vision borné (pas d\'image étirée sur les bords)', async () => {
+  await game(() => { const g = window.__MNNROW.game; g.autopilot = true; g.startRun('FOV'); });
+  const res = [];
+  for (const [w, hh] of [[412, 915], [915, 412], [1366, 768]]) {
+    await page.setViewportSize({ width: w, height: hh });
+    await wait(1800);
+    res.push(await game(() => {
+      const c = window.__MNNROW.game.rig.camera;
+      const hf = 2 * Math.atan(Math.tan((c.fov * Math.PI) / 360) * c.aspect) * 180 / Math.PI;
+      return { v: +c.fov.toFixed(1), h: +hf.toFixed(1) };
+    }));
+  }
+  await page.setViewportSize({ width: 412, height: 915 });
+  await game(() => window.__MNNROW.game.quitToMenu());
+  await wait(400);
+  assert(res.every((r) => r.v <= 58 && r.h <= 80), JSON.stringify(res));
+  return res.map((r) => `${r.v}° vertical / ${r.h}° horizontal`).join(' ; ');
+});
+
 await check('Mobile : image jamais étirée quand la zone d\'affichage change sans événement resize', async () => {
   await page.evaluate(() => { const c = document.getElementById('scene'); c.style.height = '82%'; });
   await wait(700);
