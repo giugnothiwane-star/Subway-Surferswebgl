@@ -5,6 +5,13 @@
 #             (Playwright + Chromium) -> le site n'est publié QUE si tout passe.
 # 2. deploy : publication de l'artefact (push sur main uniquement).
 # Les pull requests passent par l'étape « test » sans être publiées.
+#
+# Site privé (lien secret) : le jeu est publié sous
+#   https://giugnothiwane-star.github.io/Subway-Surferswebgl/<SITE_KEY>/
+# où SITE_KEY est un secret du dépôt (Settings → Secrets and variables →
+# Actions → New repository secret, nom SITE_KEY). L'adresse publique ne
+# montre qu'une page « Page privée ». Sans le secret, seule cette page est
+# publiée (le jeu n'est plus accessible publiquement).
 name: Tester et déployer sur GitHub Pages
 
 on:
@@ -52,12 +59,32 @@ jobs:
           name: e2e-report
           path: test-results/
           retention-days: 7
+      - name: Assemblage du site privé (jeu sous le lien secret)
+        if: github.event_name != 'pull_request'
+        env:
+          SITE_KEY: ${{ secrets.SITE_KEY }}
+        run: |
+          rm -rf site && mkdir site
+          cp tools/private/index.html tools/private/404.html tools/private/robots.txt site/
+          if [ -z "$SITE_KEY" ]; then
+            echo "::warning::Secret SITE_KEY absent : seule la page privée est publiée, le jeu n'est pas en ligne."
+            exit 0
+          fi
+          if ! printf '%s' "$SITE_KEY" | grep -Eq '^[A-Za-z0-9_-]{16,64}$'; then
+            echo "::error::SITE_KEY doit contenir 16 à 64 caractères (lettres, chiffres, - ou _)."
+            exit 1
+          fi
+          BASE_PATH="/Subway-Surferswebgl/$SITE_KEY/" npx vite build --outDir dist-private --emptyOutDir > /dev/null
+          BASE_PATH="/Subway-Surferswebgl/$SITE_KEY/" node tools/check-dist.mjs dist-private
+          mv dist-private "site/$SITE_KEY"
+          echo "Jeu publié sous le lien privé."
       - uses: actions/configure-pages@v5
         if: github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name != 'pull_request'
         with:
-          path: dist
+          path: site
+          retention-days: 1
 
   deploy:
     needs: test

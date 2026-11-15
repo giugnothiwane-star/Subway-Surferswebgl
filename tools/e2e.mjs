@@ -61,6 +61,13 @@ const wait = (ms) => page.waitForTimeout(ms);
 async function waitFor(fn, arg, timeout = 15000) {
   await page.waitForFunction(fn, arg, { timeout, polling: 100 });
 }
+// Revient au menu quoi qu'il arrive (un test en échec ne doit pas faire
+// échouer les suivants en laissant le studio ouvert).
+async function leaveStudio() {
+  try {
+    if (await page.evaluate(() => window.__MNNROW?.game.state === 'studio')) await page.click('[data-nav="studio-exit"]', { timeout: 5000 });
+  } catch { /* déjà sorti */ }
+}
 
 await check('1. Chargement du site (GitHub Pages, chemin de base)', async () => {
   const r = await page.goto(BASE);
@@ -313,16 +320,17 @@ await check('15b. Studio : couleur et image appliquées puis réinitialisées', 
   // PNG 1×1 valide
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
   await page.setInputFiles('#st-coinfile', { name: 'piece.png', mimeType: 'image/png', buffer: png });
-  await waitFor(() => document.getElementById('st-msg').textContent.includes('appliquée'), null, 10000);
+  await waitFor(() => document.getElementById('st-msg').textContent.includes('appliquée'), null, 30000);
   await page.setInputFiles('#st-coinfile', { name: 'piece.png', mimeType: 'image/png', buffer: Buffer.from('GIF89a fausse image') });
-  await waitFor(() => document.getElementById('st-msg').textContent.startsWith('✗'), null, 10000);
+  await waitFor(() => document.getElementById('st-msg').textContent.startsWith('✗'), null, 30000);
   const err = await page.textContent('#st-msg');
   page.once('dialog', (d) => d.accept());
   await page.click('#st-reset');
-  await waitFor(() => document.getElementById('st-msg').textContent.includes('réinitialisées'), null, 15000);
-  await page.click('[data-nav="studio-exit"]');
+  await waitFor(() => document.getElementById('st-msg').textContent.includes('réinitialisées'), null, 30000);
+  await leaveStudio();
   return `refus : « ${err.trim()} »`;
 });
+await leaveStudio();
 
 await check('Studio : glisser un sélecteur de couleur ne fait pas fuir la mémoire GPU', async () => {
   await page.click('[data-nav="studio"]');
@@ -334,7 +342,7 @@ await check('Studio : glisser un sélecteur de couleur ne fait pas fuir la mémo
   }
   await wait(1500);
   const t1 = await game(() => window.__MNNROW.game.r.renderer.info.memory.textures);
-  await page.click('[data-nav="studio-exit"]');
+  await leaveStudio();
   assert(t1 - t0 < 25, `textures ${t0} -> ${t1}`);
   return `textures GPU ${t0} -> ${t1} après 40 couleurs`;
 });
@@ -378,11 +386,14 @@ await check('Skin Galaxie : équipement complet, trains jamais modifiés, conser
 
 await check('Mes images : deux images locales, choix, rechargement, suppression', async () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await leaveStudio();
   await page.click('[data-nav="studio"]');
   await page.locator('#st-tabs [data-tab="coin"]').click();
+  // part d'une galerie vide (une image laissée par un test précédent ne compte pas)
+  for (let i = 0; i < 16 && await page.locator('#st-coinlib .skindel').count(); i++) await page.locator('#st-coinlib .skindel').first().click();
   for (const name of ['sonic.png', 'bob.png']) {
     await page.setInputFiles('#st-coinfile', { name, mimeType: 'image/png', buffer: png });
-    await waitFor((n) => document.getElementById('st-msg').textContent.includes(n.replace('.png', '')), name, 10000);
+    await waitFor((n) => document.getElementById('st-msg').textContent.includes(n.replace('.png', '')), name, 30000);
   }
   const a = await game(() => ({ lib: window.__MNNROW.game.save.studio.coinLib.map((e) => e.name), preset: window.__MNNROW.game.save.studio.coinPreset, faces: !!window.__MNNROW.game.entities.coinFaces }));
   await page.click('[data-nav="studio-exit"]');
@@ -418,11 +429,14 @@ await check('Caméra : champ de vision borné (pas d\'image étirée sur les bor
   const res = [];
   for (const [w, hh] of [[412, 915], [915, 412], [1366, 768]]) {
     await page.setViewportSize({ width: w, height: hh });
-    await wait(1800);
+    await wait(1200);
+    // valeur visée par la caméra (le FOV réel s'en approche en douceur)
     res.push(await game(() => {
-      const c = window.__MNNROW.game.rig.camera;
-      const hf = 2 * Math.atan(Math.tan((c.fov * Math.PI) / 360) * c.aspect) * 180 / Math.PI;
-      return { v: +c.fov.toFixed(1), h: +hf.toFixed(1) };
+      const rig = window.__MNNROW.game.rig;
+      const f = rig.framing();
+      const v = f.baseFov + f.fovKick;
+      const hf = 2 * Math.atan(Math.tan((v * Math.PI) / 360) * rig.aspect) * 180 / Math.PI;
+      return { v: +v.toFixed(1), h: +hf.toFixed(1) };
     }));
   }
   await page.setViewportSize({ width: 412, height: 915 });

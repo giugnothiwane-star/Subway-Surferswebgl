@@ -225,6 +225,25 @@ affiche un message explicatif au lieu d'un écran noir.
    En cas d'échec, l'artefact `e2e-report` contient le rapport et les captures (onglet **Actions**).
 4. Le jeu est servi à `https://giugnothiwane-star.github.io/Subway-Surferswebgl/`.
 
+### Site privé (accessible seulement avec le lien)
+
+Le jeu n'est pas publié à l'adresse publique : `https://giugnothiwane-star.github.io/Subway-Surferswebgl/`
+n'affiche qu'une page « Page privée ». Le jeu est publié sous un **chemin secret** :
+`https://giugnothiwane-star.github.io/Subway-Surferswebgl/<SITE_KEY>/`.
+
+1. Sur GitHub : **Settings → Secrets and variables → Actions → New repository secret**.
+2. Nom : `SITE_KEY` ; valeur : ta clé (16 à 64 lettres, chiffres, `-` ou `_`).
+3. **Actions → Tester et déployer sur GitHub Pages → Run workflow** (ou fusionne une PR).
+
+Sans ce secret, seule la page « Page privée » est publiée.
+**Limites** : c'est un lien non répertorié, pas un mot de passe. Toute personne qui obtient le lien peut ouvrir
+le jeu ; le code source reste public sur GitHub (le dépôt est public). Les pages portent `noindex` pour les
+moteurs de recherche. Pour une vraie protection par compte, il faudrait un dépôt privé avec une offre GitHub
+payante (Pages privées) ou un autre hébergeur avec authentification.
+
+Les images personnelles ajoutées dans **Studio → Pièces → Mes images** restent dans le navigateur de
+l'appareil (IndexedDB) : elles ne sont jamais envoyées sur GitHub ni sur le site.
+
 Si Pages reste réglé sur « Deploy from a branch », GitHub servira les **sources non compilées** : le jeu
 ne démarrera pas. L'étape 2 est indispensable.
 

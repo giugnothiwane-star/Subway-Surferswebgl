@@ -163,6 +163,26 @@ Coût de rendu mesuré (même graine, même scène, ancienne vs nouvelle version
 Les FPS de cet environnement (rendu logiciel, 1 à 3 images/s) ne permettent **aucune** conclusion sur un
 téléphone : la vérification à 60 FPS reste à faire sur un appareil réel.
 
+### Personnage refait, site privé, CI fiabilisée (15 novembre 2026)
+
+- **Personnage** (même squelette et mêmes noms de matériaux : skins, cape, couleurs, imports intacts) :
+  - proportions moins « poupée » (tête réduite de 18 %), visage avec paupières, sourcils arqués,
+    pommettes, ailes du nez, lèvres, oreilles avec rebord ;
+  - mains avec quatre doigts et un pouce ; baskets détaillées (semelle intermédiaire, bout renforcé,
+    contrefort, languette, lacets, tirant) ; poches du jean ;
+  - GLB `mnnrow_runner.glb` régénéré et chargé par le jeu (source « glb » vérifiée).
+- **Animations** :
+  - course et sprint en 8 poses avec phase de suspension, rotation du bassin, contre-rotation du buste,
+    bras opposés, tête stabilisée ;
+  - attente avec report du poids ; danse du menu sur 4 temps ; posture de hoverboard avec genoux qui
+    pompent.
+- **Site privé** : vérifié avec un serveur qui imite GitHub Pages ; l'adresse publique affiche « Page
+  privée » et le jeu fonctionne sous le chemin secret, sans fichier manquant.
+- **CI** : le premier passage sur GitHub a échoué (30/34) : un import d'image plus lent sur la machine de
+  GitHub dépassait 10 s, et les tests suivants héritaient du studio resté ouvert. Délais portés à 30 s,
+  retour au menu garanti entre les tests, galerie remise à zéro, champ de vision mesuré sur sa valeur cible.
+  Le site n'a pas été publié pendant ce temps (c'est le comportement voulu).
+
 ## 3. Ce qui n'a PAS pu être testé ici
 
 - **Téléphone Android réel** : performances, chaleur, gestes, Samsung Internet. Aucun appareil disponible.
@@ -192,8 +212,10 @@ téléphone : la vérification à 60 FPS reste à faire sur un appareil réel.
   - le calage des pieds est fait image clé par image clé, pas en IK continue.
 - **Trains** : pas de rotation des roues (les roues sont fusionnées avec le reste du train pour limiter les
   draw calls) ; LOD à 2 niveaux seulement ; légère vibration des trains en mouvement.
-- **Personnage** : géométrie toujours faite de primitives arrondies ; seules les matières (tissus, cuir,
-  cheveux) ont été refaites. Les 17 animations n'ont pas été retravaillées dans cette passe.
+- **Personnage** : géométrie refaite mais toujours construite par code (primitives arrondies liées
+  rigidement aux os, pas de peau déformable ni de sculpture) ; doigts sans os (pas d'animation des
+  doigts). Course, sprint, attente, menu et hoverboard refaits ; les autres animations (saut, roulade,
+  chute, victoire…) sont celles d'avant.
 - **Cartes** : identité visuelle conservée (ciel, éclairage, décor propres à chaque carte) ; pas de nouveaux
   types de décor dans cette passe en dehors des tunnels.
 - **Ressources en ligne** : aucun asset CC0 externe intégré. C'est un choix volontaire, pour ne prendre aucun risque de licence.
