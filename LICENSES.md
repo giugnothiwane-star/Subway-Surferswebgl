@@ -13,17 +13,17 @@ Aucun asset d'un jeu commercial n'est utilisé ni extrait. Le registre des resso
 ## Photos fournies par le propriétaire du projet
 
 Textures de pièces choisies dans **Studio → Pièces**. Le fond a été retiré automatiquement par l'outil
-`rembg` (modèles IS-Net et BiRefNet, exécutés localement), puis l'image a été recadrée en 512 × 512 px WebP.
+`rembg` (modèles IS-Net et BiRefNet, exécutés localement), puis l'image a été recadrée en 768 × 768 px WebP, l'animal agrandi pour remplir la face de la pièce.
 Sur le chaton noir et blanc, le jouet dinosaure a été retiré à la main, par sa couleur et sa position.
 
 | Fichier | Sujet | Origine | Droits |
 |---|---|---|---|
-| `public/assets/textures/coins/calopsitte-grise.webp` | Calopsitte grise | Photo fournie par le propriétaire du dépôt | **Non vérifiés** : photo vraisemblablement trouvée en ligne ; à remplacer si l'auteur n'a pas donné son accord |
-| `…/calopsitte-blanche.webp` | Calopsitte blanche | idem | **Non vérifiés** (idem) |
-| `…/calopsitte-perle.webp` | Calopsitte perle | idem | **Non vérifiés** (idem) |
-| `…/calopsitte-lutino.webp` | Calopsitte lutino | idem | **Non vérifiés** (idem) |
-| `…/calopsitte-cannelle.webp` | Calopsitte cannelle | idem | **Non vérifiés** (idem) |
-| `…/samoyede.webp` | Samoyède | Photo personnelle fournie par le propriétaire | Propriétaire du dépôt |
+| `public/assets/textures/coins/calopsitte-grise.webp` | Calopsitte grise | Photo fournie par le propriétaire du dépôt | Libre d'utilisation selon le propriétaire du dépôt (licence non vérifiée par l'équipe) |
+| `…/calopsitte-blanche.webp` | Calopsitte blanche | idem | Libre d'utilisation selon le propriétaire (idem) |
+| `…/calopsitte-perle.webp` | Calopsitte perle | idem | Libre d'utilisation selon le propriétaire (idem) |
+| `…/calopsitte-lutino.webp` | Calopsitte lutino | idem | Libre d'utilisation selon le propriétaire (idem) |
+| `…/calopsitte-cannelle.webp` | Calopsitte cannelle | idem | Libre d'utilisation selon le propriétaire (idem) |
+| `…/husky.webp` | Husky du propriétaire (« Mon husky ») | Photo personnelle fournie par le propriétaire | Propriétaire du dépôt |
 | `…/chaton-tuxedo.webp` | Chaton noir et blanc | idem | Propriétaire du dépôt |
 | `…/chaton-calin.webp` | Chaton | idem | Propriétaire du dépôt |
 | `…/chihuahua.webp` | Chihuahua | idem | Propriétaire du dépôt |

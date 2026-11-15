@@ -417,7 +417,7 @@ export class Game {
       mesh.userData.ownGeometry = true;
       mesh.scale.setScalar(2.2);
       if (this.custom.coinTexture) {
-        const face = new THREE.Mesh(new THREE.CircleGeometry(0.3, 32), new THREE.MeshStandardMaterial({ map: this.custom.coinTexture, alphaTest: 0.45, roughness: 0.45, metalness: 0.15 }));
+        const face = new THREE.Mesh(new THREE.CircleGeometry(0.375, 48), new THREE.MeshStandardMaterial({ map: this.custom.coinTexture, emissive: 0xffffff, emissiveMap: this.custom.coinTexture, emissiveIntensity: 0.35, alphaTest: 0.4, roughness: 0.5, metalness: 0.05 }));
         face.position.z = 0.063;
         face.userData.ownGeometry = true;
         mesh.add(face);

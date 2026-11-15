@@ -108,7 +108,8 @@ export function validateSave(input) {
   if (isObj(input.studio)) {
     const s = input.studio;
     out.studio.coinTint = color(s.coinTint, null);
-    out.studio.coinPreset = oneOf(s.coinPreset, COIN_SKINS.map((c) => c.id), null);
+    const preset = s.coinPreset === 'samoyede' ? 'husky' : s.coinPreset; // ancien nom du chien
+    out.studio.coinPreset = oneOf(preset, COIN_SKINS.map((c) => c.id), null);
     if (isObj(s.trainLivery)) {
       out.studio.trainLivery = {
         enabled: bool(s.trainLivery.enabled, false),

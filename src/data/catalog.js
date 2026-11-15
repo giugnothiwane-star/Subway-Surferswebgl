@@ -78,7 +78,7 @@ export const COIN_SKINS = [
   { id: 'calopsitte-perle', name: 'Calopsitte perle' },
   { id: 'calopsitte-lutino', name: 'Calopsitte lutino' },
   { id: 'calopsitte-cannelle', name: 'Calopsitte cannelle' },
-  { id: 'samoyede', name: 'Samoyède' },
+  { id: 'husky', name: 'Mon husky' },
   { id: 'chaton-tuxedo', name: 'Chaton noir et blanc' },
   { id: 'chaton-calin', name: 'Chaton câlin' },
   { id: 'chihuahua', name: 'Chihuahua' },

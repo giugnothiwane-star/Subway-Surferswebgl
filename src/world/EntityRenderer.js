@@ -88,9 +88,12 @@ export class EntityRenderer {
       if (!this.coinGeos.plain) this.coinGeos.plain = coinGeometry({ symbol: false }).geometry;
       this.coins.geometry = this.coinGeos.plain;
     } else this.coins.geometry = this.coinGeos.symbol;
+    // pièces un peu plus grandes avec une photo, pour bien la voir (visuel seulement)
+    this.coinScale = custom.coinTexture ? 1.3 : 1;
     if (custom.coinTexture) {
-      const g = new THREE.CircleGeometry(0.3, 32);
-      const back = new THREE.CircleGeometry(0.3, 32);
+      // la photo couvre toute la face (seul un fin liseré doré reste visible)
+      const g = new THREE.CircleGeometry(0.375, 48);
+      const back = new THREE.CircleGeometry(0.375, 48);
       back.rotateY(Math.PI);
       back.translate(0, 0, -0.062);
       g.translate(0, 0, 0.062);
@@ -105,7 +108,7 @@ export class EntityRenderer {
       merged.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
       merged.setIndex(idx);
       g.dispose(); back.dispose();
-      this.coinFaces = new THREE.InstancedMesh(merged, new THREE.MeshStandardMaterial({ map: custom.coinTexture, roughness: 0.45, metalness: 0.15, alphaTest: 0.45, side: THREE.DoubleSide }), COIN_CAP);
+      this.coinFaces = new THREE.InstancedMesh(merged, new THREE.MeshStandardMaterial({ map: custom.coinTexture, emissive: 0xffffff, emissiveMap: custom.coinTexture, emissiveIntensity: 0.35, roughness: 0.5, metalness: 0.05, alphaTest: 0.4, side: THREE.DoubleSide }), COIN_CAP);
       this.coinFaces.instanceMatrix = this.coins.instanceMatrix; // mêmes matrices que les pièces
       this.coinFaces.frustumCulled = false;
       this.group.add(this.coinFaces);
@@ -284,7 +287,7 @@ export class EntityRenderer {
     let x = e.ax ?? laneX(e.lane);
     let y = e.ay ?? e.y;
     let zs = s;
-    let sc = 1;
+    let sc = this.coinScale || 1;
     let spin = time * 3.2 + (e.id % 7) * 0.4;
     if (e.collected) {
       // animation de collecte : la pièce file vers le haut en rétrécissant
@@ -292,7 +295,7 @@ export class EntityRenderer {
       x += (sim.x - x) * k;
       zs += (sim.s + 0.4 - zs) * k; // la pièce accompagne le joueur
       y += (sim.y + 1.6 - y) * k;
-      sc = 1 - k * 0.9;
+      sc = (this.coinScale || 1) * (1 - k * 0.9);
       spin += k * 10;
     }
     _e.set(0, spin, 0);

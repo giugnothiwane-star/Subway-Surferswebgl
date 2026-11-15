@@ -23,7 +23,8 @@ test('sauvegarde : valeurs invalides réparées, champs inconnus ignorés', () =
 });
 
 test('sauvegarde : texture de pièce choisie validée', () => {
-  assert.equal(validateSave({ studio: { coinPreset: 'samoyede' } }).studio.coinPreset, 'samoyede');
+  assert.equal(validateSave({ studio: { coinPreset: 'husky' } }).studio.coinPreset, 'husky');
+  assert.equal(validateSave({ studio: { coinPreset: 'samoyede' } }).studio.coinPreset, 'husky');
   assert.equal(validateSave({ studio: { coinPreset: '../../etc' } }).studio.coinPreset, null);
 });
 
