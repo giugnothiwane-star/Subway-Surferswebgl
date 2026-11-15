@@ -540,6 +540,13 @@ export class UI {
     $('st-glow').addEventListener('input', (e) => { s().studio.coinGlow.color = e.target.value; s().studio.coinGlow.enabled = true; $('st-glowon').checked = true; glow(); });
     $('st-glowint').addEventListener('input', (e) => { s().studio.coinGlow.intensity = Number(e.target.value); s().studio.coinGlow.enabled = true; $('st-glowon').checked = true; glow(); });
     const train = throttle(() => { this.game.applyCustom({}); this.setSubject('train', true); }, 200);
+    $('st-trainstyle').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-style]');
+      if (!b) return;
+      this.click();
+      for (const x of $('st-trainstyle').children) x.classList.toggle('on', x === b);
+      this.game.setStudioTrainStyle(b.dataset.style);
+    });
     $('st-trainon').addEventListener('change', (e) => { s().studio.trainLivery.enabled = e.target.checked; train(); });
     $('st-t1').addEventListener('input', (e) => { s().studio.trainLivery.body = e.target.value; s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; train(); });
     $('st-t2').addEventListener('input', (e) => { s().studio.trainLivery.stripe = e.target.value; s().studio.trainLivery.enabled = true; $('st-trainon').checked = true; train(); });

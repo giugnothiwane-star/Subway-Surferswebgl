@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { applyLook, createCharacter } from '../models/Character.js';
 import { buildHoverboard } from '../models/Hoverboards.js';
 import { jetpackModel, magnetModel, shieldBubbleMaterial } from '../models/Props.js';
-import { makeTexture } from '../models/textures.js';
+import { fabricTexture, makeTexture, normalTexture } from '../models/textures.js';
 import { Cape } from '../models/Cape.js';
 
 const ONE_SHOT = new Set(['runStart', 'jump', 'land', 'roll', 'hit', 'death', 'leanLeft', 'leanRight', 'collect']);
@@ -48,6 +48,24 @@ export class PlayerView {
     this.group.add(this.shield);
     this.jetpack = jetpackModel();
     this.jetpack.visible = false;
+    // flammes stylisées des tuyères (cône additif, cœur blanc -> orange)
+    this.flameMat = new THREE.MeshBasicMaterial({ color: 0xffa53a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    this.flameCoreMat = new THREE.MeshBasicMaterial({ color: 0xfff3c0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    const flameGeo = new THREE.ConeGeometry(0.075, 0.5, 12, 1, true);
+    flameGeo.translate(0, -0.25, 0);
+    flameGeo.rotateX(Math.PI);
+    const coreGeo = new THREE.ConeGeometry(0.04, 0.28, 10, 1, true);
+    coreGeo.translate(0, -0.14, 0);
+    coreGeo.rotateX(Math.PI);
+    this.flames = [];
+    for (const sx of [-1, 1]) {
+      const f = new THREE.Mesh(flameGeo, this.flameMat);
+      f.add(new THREE.Mesh(coreGeo, this.flameCoreMat));
+      f.position.set(sx * 0.13, -0.35, 0);
+      f.rotation.x = Math.PI;
+      this.jetpack.add(f);
+      this.flames.push(f);
+    }
     this.magnet = magnetModel();
     this.magnet.scale.setScalar(0.55);
     this.magnet.visible = false;
@@ -96,6 +114,11 @@ export class PlayerView {
       hand.add(this.magnet);
       this.magnet.position.set(0, -0.12, 0.04);
       this.magnet.rotation.set(Math.PI, 0, 0);
+      // taille réelle constante (~32 cm) quelle que soit l'échelle de l'os de la
+      // main : sur le personnage livré, l'os est agrandi et l'aimant masquait le joueur
+      rig.root.updateMatrixWorld(true);
+      const ws = hand.getWorldScale(new THREE.Vector3()).x;
+      this.magnet.scale.setScalar(0.42 / Math.max(0.05, ws));
     }
     // cape : sous la nuque, dans le dos (modèle importé : position estimée)
     this.cape.mesh.removeFromParent();
@@ -118,10 +141,11 @@ export class PlayerView {
       this.materials.Shirt.map = look.shirtTexture;
       this.materials.Shirt.color.set(0xffffff);
       this.materials.Shirt.needsUpdate = true;
-    } else if (this.materials.Shirt?.map) {
-      this.materials.Shirt.map = null;
+    } else if (this.materials.Shirt && this.materials.Shirt.map !== this.fabric('knit')) {
+      this.materials.Shirt.map = this.fabric('knit');
       this.materials.Shirt.needsUpdate = true;
     }
+    this.enhanceMaterials();
   }
 
   setBoard(style, color, color2, customTexture = null) {
@@ -162,6 +186,43 @@ export class PlayerView {
   }
 
   // Événements de la simulation -> animations.
+  // Textures de tissu partagées (répétées pour un grain fin sur chaque pièce).
+  fabric(kind) {
+    const t = fabricTexture(kind);
+    if (!t.userData.tiled) { t.repeat.set(kind === 'hair' ? 2 : 3, kind === 'hair' ? 1 : 3); t.userData.tiled = true; }
+    return t;
+  }
+
+  // Matières crédibles : maille, jean, cuir, caoutchouc, peau satinée, cheveux.
+  // Relief (cartes de normales) seulement hors qualité LOW.
+  enhanceMaterials() {
+    const M = this.materials || {};
+    const relief = this.quality !== 'LOW';
+    const set = (name, props, fabric, strength = 1.2, scale = 0.6) => {
+      const m = M[name];
+      if (!m) return;
+      Object.assign(m, props);
+      if (fabric && name !== 'Shirt') m.map = this.fabric(fabric);
+      const nm = fabric && relief ? normalTexture(this.fabric(fabric), strength) : null;
+      if (nm && !nm.userData.tiled) { nm.repeat.copy(this.fabric(fabric).repeat); nm.userData.tiled = true; }
+      if (m.normalMap !== nm) { m.normalMap = nm; m.normalScale?.set(scale, scale); m.needsUpdate = true; }
+    };
+    set('Shirt', { roughness: 0.88, metalness: 0 }, 'knit', 1.6, 0.7);
+    set('Pants', { roughness: 0.82, metalness: 0 }, 'denim', 1.4, 0.55);
+    set('Shoes', { roughness: 0.42, metalness: 0.05 }, 'leather', 1, 0.35);
+    set('Sole', { roughness: 0.92, metalness: 0 });
+    set('Skin', { roughness: 0.62, metalness: 0 });
+    set('Hair', { roughness: 0.4, metalness: 0.05 }, 'hair', 2, 0.5);
+    set('Accessory', { roughness: 0.28, metalness: 0.2 });
+    set('Accent', { roughness: 0.5, metalness: 0.1 });
+  }
+
+  setQuality(name) {
+    if (this.quality === name) return;
+    this.quality = name;
+    this.enhanceMaterials();
+  }
+
   onEvent(ev) {
     switch (ev.type) {
       case 'lane': this.overlay(ev.dir < 0 ? 'leanLeft' : 'leanRight'); break;
@@ -243,6 +304,13 @@ export class PlayerView {
     }
     // jetpack, aimant, baskets, bouclier
     this.jetpack.visible = jetOn || (sim.jet === 'descend');
+    if (this.jetpack.visible) {
+      const thrust = jetOn ? 1 : 0.45;
+      for (const [i, f] of this.flames.entries()) {
+        const fl = thrust * (0.85 + Math.sin(this.time * 47 + i * 2.1) * 0.12 + Math.sin(this.time * 23 + i) * 0.08);
+        f.scale.set(1, fl * 1.6, 1);
+      }
+    }
     this.magnet.visible = sim.powerups.active('magnet') && !jetOn;
     const sneak = sim.powerups.active('sneakers');
     if (this.materials?.Shoes) {

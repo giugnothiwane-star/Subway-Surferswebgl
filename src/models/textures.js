@@ -139,48 +139,24 @@ export function trainSideTexture(style, livery) {
       ctx.fillStyle = accent;
       ctx.fillRect(0, h * 0.86, w, h * 0.04);
     }
-    // portes (2 par flanc)
-    const doors = style === 'modern' ? [0.3, 0.72] : [0.22, 0.5, 0.78];
-    for (const d of doors) {
-      const dx = d * w - 38;
+    // portes + fenêtres : intérieur éclairé visible (sièges, barres), vitre teintée, reflets
+    const L = trainWindowLayout(style, w, h);
+    for (const d of L.doors) {
       ctx.fillStyle = shade(body, -0.08);
-      roundRect(ctx, dx, h * 0.08, 76, h * 0.78, 6); ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 3;
-      roundRect(ctx, dx, h * 0.08, 76, h * 0.78, 6); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(dx + 38, h * 0.08); ctx.lineTo(dx + 38, h * 0.86); ctx.stroke();
-      ctx.fillStyle = css(livery.window || '#1a2a3a');
-      roundRect(ctx, dx + 7, h * 0.42, 25, h * 0.36, 4); ctx.fill();
-      roundRect(ctx, dx + 44, h * 0.42, 25, h * 0.36, 4); ctx.fill();
-      glassReflection(ctx, dx + 7, h * 0.42, 62, h * 0.36);
+      roundRect(ctx, d.x, h * 0.08, d.w, h * 0.78, 6); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3;
+      roundRect(ctx, d.x, h * 0.08, d.w, h * 0.78, 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(d.x + d.w / 2, h * 0.08); ctx.lineTo(d.x + d.w / 2, h * 0.86); ctx.stroke();
+      // joints caoutchouc + poignées
+      ctx.strokeStyle = 'rgba(20,20,24,0.8)'; ctx.lineWidth = 2;
+      roundRect(ctx, d.x + 3, h * 0.08 + 3, d.w - 6, h * 0.78 - 6, 5); ctx.stroke();
+      ctx.fillStyle = 'rgba(230,235,240,0.85)';
+      ctx.fillRect(d.x + d.w / 2 - 9, h * 0.38, 4, 16); ctx.fillRect(d.x + d.w / 2 + 5, h * 0.38, 4, 16);
+      // bouton d'ouverture
+      ctx.fillStyle = '#3ee07a';
+      ctx.beginPath(); ctx.arc(d.x + d.w + 9, h * 0.45, 4, 0, Math.PI * 2); ctx.fill();
     }
-    // fenêtres
-    const winY = h * 0.42;
-    const winH = style === 'modern' ? h * 0.36 : h * 0.33;
-    ctx.fillStyle = css(livery.window || '#1a2a3a');
-    const segs = [];
-    let prev = style === 'modern' ? 0.02 : 0.04;
-    for (const d of doors) { segs.push([prev, d - 0.055]); prev = d + 0.055; }
-    segs.push([prev, 0.98]);
-    for (const [a, b] of segs) {
-      if (style === 'modern') {
-        roundRect(ctx, a * w + 6, winY, (b - a) * w - 12, winH, 18); ctx.fill();
-        glassReflection(ctx, a * w + 6, winY, (b - a) * w - 12, winH);
-      } else {
-        const count = Math.max(1, Math.round(((b - a) * w) / 90));
-        const ww = ((b - a) * w) / count;
-        for (let i = 0; i < count; i++) {
-          ctx.fillStyle = css(livery.window || '#1a2a3a');
-          roundRect(ctx, a * w + i * ww + 6, winY, ww - 12, winH, 9); ctx.fill();
-          glassReflection(ctx, a * w + i * ww + 6, winY, ww - 12, winH);
-          // silhouettes de passagers (discrètes)
-          if ((i + Math.floor(a * 10)) % 3 === 0) {
-            ctx.fillStyle = 'rgba(255,220,180,0.13)';
-            ctx.beginPath(); ctx.arc(a * w + i * ww + ww / 2, winY + winH * 0.45, 9, 0, Math.PI * 2); ctx.fill();
-            ctx.fillRect(a * w + i * ww + ww / 2 - 12, winY + winH * 0.6, 24, winH * 0.4);
-          }
-        }
-      }
-    }
+    for (const wr of L.windows) drawTrainWindow(ctx, wr, css(livery.window || '#1a2a3a'), style);
     // logo original
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.font = 'italic 900 22px sans-serif';
@@ -197,6 +173,103 @@ function flipText(ctx, text, x, y) {
   ctx.scale(1, -1);
   ctx.fillText(text, x, -y);
   ctx.restore();
+}
+
+// Emplacement des fenêtres et portes d'un flanc (repère retourné : y depuis le
+// bas). Partagé entre la texture couleur et la carte d'émission (éclairage
+// intérieur), qui doivent coïncider exactement.
+export function trainWindowLayout(style, w, h) {
+  if (style === 'freight') return { doors: [], windows: [{ x: 16, y: h * 0.5, w: 120, h: h * 0.3, r: 10, cab: true }] };
+  const doors = style === 'modern' ? [0.3, 0.72] : [0.22, 0.5, 0.78];
+  const out = { doors: [], windows: [] };
+  for (const d of doors) {
+    const dx = d * w - 38;
+    out.doors.push({ x: dx, w: 76 });
+    out.windows.push({ x: dx + 7, y: h * 0.42, w: 25, h: h * 0.36, r: 4, door: true });
+    out.windows.push({ x: dx + 44, y: h * 0.42, w: 25, h: h * 0.36, r: 4, door: true });
+  }
+  const winY = h * 0.42;
+  const winH = style === 'modern' ? h * 0.36 : h * 0.33;
+  const segs = [];
+  let prev = style === 'modern' ? 0.02 : 0.04;
+  for (const d of doors) { segs.push([prev, d - 0.055]); prev = d + 0.055; }
+  segs.push([prev, 0.98]);
+  for (const [a, b] of segs) {
+    if (style === 'modern') out.windows.push({ x: a * w + 6, y: winY, w: (b - a) * w - 12, h: winH, r: 18 });
+    else {
+      const count = Math.max(1, Math.round(((b - a) * w) / 90));
+      const ww = ((b - a) * w) / count;
+      for (let i = 0; i < count; i++) out.windows.push({ x: a * w + i * ww + 6, y: winY, w: ww - 12, h: winH, r: 9, pax: (i + Math.floor(a * 10)) % 3 === 0 });
+    }
+  }
+  return out;
+}
+
+// Intérieur vu à travers une vitre : plafond lumineux, dossiers de sièges,
+// barres de maintien, passagers, puis vitre teintée et reflet du ciel.
+function drawTrainWindow(ctx, wr, tint, style) {
+  const { x, y, w, h, r } = wr;
+  ctx.save();
+  roundRect(ctx, x, y, w, h, r);
+  ctx.clip();
+  const g = ctx.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, '#3a3a40');
+  g.addColorStop(0.55, '#a59d8c');
+  g.addColorStop(0.92, '#efe6cf');
+  g.addColorStop(1, '#fff8e6');
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  if (!wr.cab) {
+    // dossiers de sièges
+    ctx.fillStyle = style === 'modern' ? '#2f4566' : '#7a2f3a';
+    for (let sx = x + 4; sx < x + w - 6; sx += 22) { roundRect(ctx, sx, y, 16, h * 0.4, 4); ctx.fill(); }
+    // barres de maintien
+    ctx.fillStyle = 'rgba(215,220,228,0.9)';
+    for (let px = x + 14; px < x + w; px += 44) ctx.fillRect(px, y, 3, h);
+    ctx.fillRect(x, y + h * 0.82, w, 2.5);
+    if (wr.pax) {
+      ctx.fillStyle = 'rgba(40,32,30,0.55)';
+      ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.58, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(x + w / 2 - 11, y, 22, h * 0.48);
+    }
+  } else {
+    ctx.fillStyle = '#2a2f36';
+    ctx.fillRect(x, y, w, h * 0.3); // pupitre
+  }
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = tint;
+  ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  glassReflection(ctx, x, y, w, h);
+  ctx.strokeStyle = 'rgba(15,15,18,0.85)';
+  ctx.lineWidth = 3;
+  roundRect(ctx, x, y, w, h, r);
+  ctx.stroke();
+}
+
+// Carte d'émission du flanc : éclairage intérieur visible à travers les vitres.
+export function trainSideEmissive(style) {
+  return makeTexture(`trainSideE:${style}`, 512, 128, (ctx, w, h) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+    ctx.translate(0, h);
+    ctx.scale(0.5, -0.5);
+    const L = trainWindowLayout(style, 1024, 256);
+    for (const wr of L.windows) {
+      const g = ctx.createLinearGradient(0, wr.y, 0, wr.y + wr.h);
+      g.addColorStop(0, wr.cab ? '#1a1a1a' : '#4a4232');
+      g.addColorStop(0.7, wr.cab ? '#3a3a3a' : '#c9b98f');
+      g.addColorStop(1, wr.cab ? '#555' : '#fff1cc');
+      ctx.fillStyle = g;
+      roundRect(ctx, wr.x, wr.y, wr.w, wr.h, wr.r);
+      ctx.fill();
+      if (!wr.cab) {
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        for (let sx = wr.x + 4; sx < wr.x + wr.w - 6; sx += 22) ctx.fillRect(sx, wr.y, 16, wr.h * 0.4);
+      }
+    }
+  }, { srgb: true });
 }
 
 function glassReflection(ctx, x, y, w, h) {
@@ -284,6 +357,27 @@ export function trainFrontTexture(style, livery) {
   });
 }
 
+// Carte d'émission de la face avant : girouette lumineuse + cabine éclairée.
+export function trainFrontEmissive(style, livery) {
+  const dest = livery.destination || 'CENTRAL';
+  return makeTexture(`trainFrontE:${style}:${dest}`, 256, 256, (ctx, w, h) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+    const g = ctx.createLinearGradient(0, h * 0.08, 0, h * 0.5);
+    g.addColorStop(0, '#2b2618');
+    g.addColorStop(1, '#0d0c08');
+    ctx.fillStyle = g;
+    roundRect(ctx, w * 0.1, h * 0.08, w * 0.8, h * 0.42, 18);
+    ctx.fill();
+    ctx.fillStyle = '#ffb53b';
+    ctx.font = 'bold 20px monospace';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#ff9a1a';
+    ctx.shadowBlur = 8;
+    ctx.fillText(dest, w / 2, h * 0.62);
+  });
+}
+
 export function containerTexture(color, label = 'MNNROW LOGISTICS') {
   const key = `container:${color}:${label}`;
   return makeTexture(key, 512, 256, (ctx, w, h) => {
@@ -303,8 +397,26 @@ export function containerTexture(color, label = 'MNNROW LOGISTICS') {
     ctx.fillText(label, 24, 52);
     ctx.font = 'bold 18px monospace';
     ctx.fillText('MNRU 402' + (label.length % 10) + '17 4', 24, 80);
-    // rouille / usure
+    // coulures verticales (pluie, rouille) et marquages de manutention
     const r = rng(hashStr(key));
+    for (let i = 0; i < 26; i++) {
+      const x = r() * w;
+      const len = 30 + r() * 120;
+      const g = ctx.createLinearGradient(0, 0, 0, len);
+      g.addColorStop(0, `rgba(70,40,25,${0.12 + r() * 0.18})`);
+      g.addColorStop(1, 'rgba(70,40,25,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x, 0, 2 + r() * 4, len);
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText('MAX GROSS 30 480 KG', w - 210, h - 30);
+    ctx.fillText('TARE  3 750 KG', w - 210, h - 12);
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(w - 64, 20, 40, 40);
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.fillText('!', w - 50, 50);
     for (let i = 0; i < 40; i++) {
       ctx.fillStyle = `rgba(90,50,30,${0.05 + r() * 0.12})`;
       ctx.beginPath();
@@ -1023,4 +1135,61 @@ export function shade(hex, amt) {
   if (amt >= 0) c.lerp(new THREE.Color(1, 1, 1), amt);
   else c.lerp(new THREE.Color(0, 0, 0), -amt);
   return '#' + c.getHexString();
+}
+
+// ---- Tissus du personnage (gris clair, teintés par la couleur choisie) -----------
+// Maille de pull : rangées de « V » ; jean : sergé diagonal + fils irréguliers ;
+// cuir de chaussure : grain fin. Valeurs proches du blanc pour ne pas assombrir
+// la couleur du joueur, le relief vient de la carte de normales dérivée.
+export function fabricTexture(kind) {
+  return makeTexture(`fabric:${kind}`, 256, 256, (ctx, w, h) => {
+    const r = rng(hashStr(kind));
+    ctx.fillStyle = '#f2f2f2';
+    ctx.fillRect(0, 0, w, h);
+    if (kind === 'knit') {
+      const sw = 16;
+      const sh = 12;
+      for (let y = 0; y < h; y += sh) {
+        for (let x = 0; x < w; x += sw) {
+          const v = 205 + Math.floor(r() * 30);
+          ctx.strokeStyle = `rgb(${v},${v},${v})`;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(x + 2, y + 1); ctx.lineTo(x + sw / 2, y + sh - 1); ctx.lineTo(x + sw - 2, y + 1);
+          ctx.stroke();
+        }
+      }
+      // côtes du bas de manche / ourlets
+      ctx.fillStyle = 'rgba(0,0,0,0.05)';
+      for (let x = 0; x < w; x += 8) ctx.fillRect(x, 0, 2, h);
+    } else if (kind === 'denim') {
+      ctx.strokeStyle = 'rgba(0,0,0,0.13)';
+      ctx.lineWidth = 2;
+      for (let i = -h; i < w; i += 5) { ctx.beginPath(); ctx.moveTo(i, h); ctx.lineTo(i + h, 0); ctx.stroke(); }
+      for (let i = 0; i < 900; i++) {
+        ctx.fillStyle = `rgba(255,255,255,${r() * 0.35})`;
+        ctx.fillRect(r() * w, r() * h, 1 + r() * 6, 1);
+      }
+      // usure claire au centre (délavé)
+      const g = ctx.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.7);
+      g.addColorStop(0, 'rgba(255,255,255,0.18)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    } else if (kind === 'leather') {
+      for (let i = 0; i < 2600; i++) {
+        const v = 200 + Math.floor(r() * 50);
+        ctx.fillStyle = `rgb(${v},${v},${v})`;
+        ctx.beginPath(); ctx.arc(r() * w, r() * h, 0.8 + r() * 1.6, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (kind === 'hair') {
+      for (let i = 0; i < 700; i++) {
+        const x = r() * w;
+        const v = 170 + Math.floor(r() * 85);
+        ctx.strokeStyle = `rgb(${v},${v},${v})`;
+        ctx.lineWidth = 1 + r() * 1.5;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.quadraticCurveTo(x + (r() - 0.5) * 20, h / 2, x + (r() - 0.5) * 10, h); ctx.stroke();
+      }
+    }
+  }, { repeat: true });
 }

@@ -2,7 +2,7 @@
 // jeu (InstancedMesh) et l'aperçu du studio — une seule source de vérité.
 import * as THREE from 'three';
 import { skinMaterial } from './SkinShader.js';
-import { coinGeometry, coinGlowMaterial } from '../models/Props.js';
+import { coinGeometry, coinGlowMaterial, pickupEnvironment } from '../models/Props.js';
 
 export const DEFAULT_COIN = {
   skin: 'normal', // normal | galaxy | neon | gold | silver | crystal | fire | ice | rainbow | shadow | energy | texture
@@ -185,7 +185,7 @@ function pbr(name, color, cfg) {
     pbrCache.delete(k);
   }
   if (!pbrCache.has(key)) {
-    const m = new THREE.MeshStandardMaterial({ color, metalness: cfg.metalness, roughness: cfg.roughness, envMapIntensity: cfg.shine, emissive: 0x3a2200, emissiveIntensity: name === 'body' ? 0.25 : 0 });
+    const m = new THREE.MeshStandardMaterial({ color, metalness: cfg.metalness, roughness: cfg.roughness, envMap: pickupEnvironment(), envMapIntensity: cfg.shine, emissive: 0x3a2200, emissiveIntensity: name === 'body' ? 0.25 : 0 });
     m.name = `Coin_${name}`;
     pbrCache.set(key, m);
   }
@@ -213,6 +213,7 @@ export function coinFaceMaterial(face, cfg = DEFAULT_COIN) {
     emissiveIntensity: emboss ? 0.16 : 0.3,
     roughness: Math.max(0.25, c.roughness),
     metalness: Math.min(emboss ? 0.45 : 0.3, c.metalness * 0.45),
+    envMap: pickupEnvironment(),
     envMapIntensity: c.shine,
     alphaTest: 0.4,
     side: THREE.DoubleSide,

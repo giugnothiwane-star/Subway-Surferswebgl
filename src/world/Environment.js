@@ -60,10 +60,11 @@ function instanceScaledUV(material, tile) {
   return material;
 }
 
-function skyMaterial(sky) {
+function skyMaterial(sky, { env = false } = {}) {
   return new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
+    depthTest: !env,
     fog: false,
     uniforms: {
       uTop: { value: new THREE.Color(sky.top) },
@@ -76,7 +77,10 @@ function skyMaterial(sky) {
       uClouds: { value: sky.clouds || 0 },
       uTime: { value: 0 },
     },
-    vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }`,
+    // env : projection classique (rendu dans un cube pour la carte de reflets)
+    vertexShader: env
+      ? `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`
+      : `varying vec3 vDir; void main(){ vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position,1.0); gl_Position = p.xyww; }`,
     fragmentShader: `uniform vec3 uTop; uniform vec3 uHorizon; uniform vec3 uBottom; uniform vec3 uSunDir; uniform vec3 uSunColor;
       uniform float uSunSize; uniform float uStars; uniform float uClouds; uniform float uTime; varying vec3 vDir;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
@@ -168,8 +172,9 @@ export class Environment {
     if (this.ambient) this.group.add(this.ambient.object);
     scene.fog = new THREE.Fog(map.fog.color, map.fog.near, Math.min(map.fog.far, profile.drawDistance));
     scene.background = new THREE.Color(map.fog.color);
-    scene.environment = renderer.environment();
-    scene.environmentIntensity = map.id === 'neon' ? 0.6 : 0.9;
+    scene.environment = this.buildSkyEnvironment();
+    this.envBase = map.lights.envIntensity ?? (map.id === 'neon' ? 1.7 : 1.45);
+    scene.environmentIntensity = this.envBase;
     renderer.renderer.toneMappingExposure = map.lights.exposure;
   }
 
@@ -185,6 +190,34 @@ export class Environment {
     this.sky.frustumCulled = false;
     this.sky.renderOrder = -10;
     this.group.add(this.sky);
+  }
+
+  // Carte de reflets tirée du ciel de la carte (préfiltrée PMREM, calculée une
+  // fois) : les trains, vitres et métaux reflètent le vrai ciel (coucher de
+  // soleil, nuit néon, neige…) au lieu d'un studio neutre. Sol = couleur
+  // d'ambiance basse, pour des reflets sombres vers le bas.
+  buildSkyEnvironment() {
+    const r = this.renderer.renderer;
+    const envScene = new THREE.Scene();
+    // ciel de nuit : reflets ramenés vers un gris neutre pour garder des
+    // couleurs lisibles (sinon tout vire au violet sombre)
+    const sky = this.map.sky;
+    const n = this.map.lights.envNeutral ?? ((sky.stars || 0) > 0.5 ? 0.5 : 0.15);
+    const neutral = (c) => '#' + new THREE.Color(c).lerp(new THREE.Color('#b9bec8'), n).getHexString();
+    const mat = skyMaterial({ ...sky, top: neutral(sky.top), horizon: neutral(sky.horizon), bottom: neutral(sky.bottom), stars: 0, clouds: (sky.clouds || 0) * 0.6 }, { env: true });
+    const geo = new THREE.SphereGeometry(50, 48, 24);
+    envScene.add(new THREE.Mesh(geo, mat));
+    const groundMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(this.map.lights.hemiGround).lerp(new THREE.Color(this.map.sky.horizon), 0.35), side: THREE.DoubleSide });
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(48, 32), groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -6;
+    envScene.add(ground);
+    const pm = new THREE.PMREMGenerator(r);
+    const rt = pm.fromScene(envScene, 0.015);
+    pm.dispose();
+    geo.dispose(); mat.dispose(); ground.geometry.dispose(); groundMat.dispose();
+    this.track(rt);
+    return rt.texture;
   }
 
   buildLights() {
@@ -216,9 +249,20 @@ export class Environment {
   // Studio : réglages d'éclairage personnalisés.
   setLighting({ exposure = 1, sun = 1, hemi = 1 } = {}) {
     const L = this.map.lights;
+    this.lightMul = { sun, hemi };
     this.renderer.renderer.toneMappingExposure = L.exposure * exposure;
-    this.sun.intensity = L.sunIntensity * sun;
-    this.hemi.intensity = L.hemi * hemi;
+    this.applyTunnelLight();
+  }
+
+  // Dans un tunnel : soleil et ciel atténués progressivement (entrée/sortie
+  // fondues), reflets réduits ; les rampes lumineuses du tunnel prennent le relais.
+  applyTunnelLight() {
+    const L = this.map.lights;
+    const m = this.lightMul || { sun: 1, hemi: 1 };
+    const k = this.tunnelK || 0;
+    this.sun.intensity = L.sunIntensity * m.sun * (1 - 0.82 * k);
+    this.hemi.intensity = L.hemi * m.hemi * (1 - 0.45 * k);
+    this.scene.environmentIntensity = (this.envBase ?? 1) * (1 - 0.6 * k);
   }
 
   // Relief (carte de normales) dérivé de la texture couleur ; ignoré en LOW pour
@@ -614,6 +658,15 @@ export class Environment {
       }
     }
     this.updateZones(s);
+    // éclairage de tunnel autour du joueur
+    let inT = 0;
+    for (const zn of zones) {
+      if (zn.type !== 'tunnel') continue;
+      if (s > zn.s0 + 1 && s < zn.s1 - 1) { inT = 1; break; }
+    }
+    const k0 = this.tunnelK || 0;
+    this.tunnelK = k0 + (inT - k0) * Math.min(1, dt * 3);
+    if (Math.abs(this.tunnelK - k0) > 0.001 || (inT && k0 < 0.999)) this.applyTunnelLight();
     if (this.ambient) this.ambient.update(dt, camera.position, speed);
     if (this.neonMats && this.map.ambience.neonFlicker) {
       for (const n of this.neonMats) {

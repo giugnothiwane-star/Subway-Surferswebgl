@@ -131,6 +131,38 @@ Le registre complet des bugs se trouve dans [`BUGS.md`](BUGS.md).
 - Trains toujours solides (rebond sur le toit si le choc est absorbé), champ de vision borné, résolution minimale relevée.
 - Résultat : **37/37 tests Node** et **34/34 vérifications navigateur**.
 
+### Remaster graphique et chaîne de tests (15 novembre 2026)
+
+Exécutions réelles dans cet environnement (Chromium 1243 + SwiftShader, Node 22) :
+
+- **40/40 tests Node** (dont 3 nouveaux : détection WebGL 2) ;
+- **34/34 vérifications navigateur** via `npm run test:e2e` (4 min 18 s) ;
+- `npm run check:dist` : toutes les ressources présentes sous `/Subway-Surferswebgl/`.
+
+Changements vérifiés par captures avant/après (`docs/screenshots/remaster/`) :
+
+- trains : intérieur éclairé visible, portes détaillées, girouette lumineuse, pantographes, équipements sous
+  caisse, rétroviseurs ; fret avec échelles, attelages, coins ISO, conteneurs patinés ;
+- reflets calculés à partir du ciel de chaque carte ; pièces et bonus gardent des reflets neutres (l'or
+  restait brun sur la carte néon lors d'un premier essai, corrigé) ;
+- luminosité moyenne mesurée par capture : 88 à 97 % de l'ancienne version (plus de contraste, moins de
+  blanc délavé), la plage de la côte à 80 % (ambiance coucher de soleil) ;
+- tunnels : lumière du soleil atténuée progressivement, rampes LED, câbles ;
+- personnage : maille, jean, cuir, cheveux (textures + relief) ; effets de vitesse, d'aimant,
+  d'atterrissage, de hoverboard et flammes du jetpack.
+
+Coût de rendu mesuré (même graine, même scène, ancienne vs nouvelle version) :
+
+| Profil / carte | Draw calls | Triangles | Textures |
+|---|---|---|---|
+| LOW / Metro | 125 → 134 | 188k → 195k | 36 → 49 |
+| LOW / Néon | 119 → 132 | 177k → 185k | 60 → 74 |
+| HIGH / Metro | 147 → 156 | 265k → 275k | 68 → 86 |
+| HIGH / Néon | 150 → 159 | 259k → 268k | 76 → 94 |
+
+Les FPS de cet environnement (rendu logiciel, 1 à 3 images/s) ne permettent **aucune** conclusion sur un
+téléphone : la vérification à 60 FPS reste à faire sur un appareil réel.
+
 ## 3. Ce qui n'a PAS pu être testé ici
 
 - **Téléphone Android réel** : performances, chaleur, gestes, Samsung Internet. Aucun appareil disponible.
@@ -158,9 +190,16 @@ Le registre complet des bugs se trouve dans [`BUGS.md`](BUGS.md).
   - liaison rigide os-pièces avec des rotules : pas de peau déformable avec poids lissés ;
   - pas de capture de mouvement ;
   - le calage des pieds est fait image clé par image clé, pas en IK continue.
-- **Trains** : pas d'animation de roues ; LOD à 2 niveaux seulement.
+- **Trains** : pas de rotation des roues (les roues sont fusionnées avec le reste du train pour limiter les
+  draw calls) ; LOD à 2 niveaux seulement ; légère vibration des trains en mouvement.
+- **Personnage** : géométrie toujours faite de primitives arrondies ; seules les matières (tissus, cuir,
+  cheveux) ont été refaites. Les 17 animations n'ont pas été retravaillées dans cette passe.
+- **Cartes** : identité visuelle conservée (ciel, éclairage, décor propres à chaque carte) ; pas de nouveaux
+  types de décor dans cette passe en dehors des tunnels.
 - **Ressources en ligne** : aucun asset CC0 externe intégré. C'est un choix volontaire, pour ne prendre aucun risque de licence.
-- **Textures** : pas de compression GPU (KTX2/Basis) ; les textures sont générées sur canvas au chargement.
+- **Textures** : pas de compression GPU (KTX2/Basis). Étudiée puis écartée : toutes les textures sont
+  générées sur canvas au chargement, il n'y a donc pas de fichiers image à compresser ; l'ajouter
+  imposerait un transcodeur WASM de plus de 200 ko pour un gain nul.
 - **Audio** : musique procédurale à valider à l'écoute ; pas de mixage par piste dans les réglages.
 - **Studio** :
   - les modèles importés n'utilisent pas notre squelette : animations propres au fichier ou bascule procédurale ;

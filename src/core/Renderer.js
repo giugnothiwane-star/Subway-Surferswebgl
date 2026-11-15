@@ -11,18 +11,31 @@ export const PROFILES = {
   high: { name: 'HIGH', dprMax: 2.0, dprMin: 1.25, shadows: true, shadowSize: 2048, drawDistance: 250, density: 1, particles: 1, antialias: true, lod: 110 },
 };
 
-export function detectWebGL() {
+// Three.js 0.170 exige WebGL 2 : WebGL 1 seul est refusé avec un message clair
+// (sinon le moteur échouerait plus tard et laisserait un écran noir).
+export function detectWebGL(doc = globalThis.document) {
   try {
-    const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') || c.getContext('webgl');
-    if (!gl) return { ok: false, reason: 'Ce navigateur ne fournit pas de contexte WebGL.' };
+    if (!doc || typeof doc.createElement !== 'function') return { ok: false, webgl2: false, reason: 'Environnement sans page web : impossible de créer un canevas 3D.' };
+    const c = doc.createElement('canvas');
+    const gl = c.getContext('webgl2');
+    if (!gl) {
+      let gl1 = null;
+      try { gl1 = doc.createElement('canvas').getContext('webgl'); } catch { /* ignoré */ }
+      return {
+        ok: false,
+        webgl2: false,
+        webgl1: !!gl1,
+        reason: gl1
+          ? 'Ton navigateur ne gère que WebGL 1. MNNROW a besoin de WebGL 2 : mets à jour Chrome, Firefox, Edge ou Safari (15 ou plus), ou active l\'accélération matérielle.'
+          : 'Ton navigateur ne fournit pas WebGL 2 (accélération graphique désactivée, pilote bloqué ou navigateur trop ancien). Active l\'accélération matérielle ou essaie Chrome / Firefox à jour.',
+      };
+    }
     const info = gl.getExtension('WEBGL_debug_renderer_info');
     const gpu = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : 'inconnu';
-    const v2 = typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext;
     gl.getExtension('WEBGL_lose_context')?.loseContext();
-    return { ok: true, webgl2: v2, gpu: String(gpu) };
+    return { ok: true, webgl2: true, gpu: String(gpu) };
   } catch (e) {
-    return { ok: false, reason: e.message };
+    return { ok: false, webgl2: false, reason: `Erreur pendant la détection de WebGL 2 : ${e.message}` };
   }
 }
 

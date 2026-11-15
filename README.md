@@ -185,10 +185,31 @@ npm test             # tests de logique (node --test)
 npm run build        # dist/ prêt pour GitHub Pages
 npx vite preview     # sert dist/ sous /Subway-Surferswebgl/
 npm run export:models   # régénère public/assets/models/*.glb (serveur dev requis, URL en argument)
-node tools/e2e.mjs      # tests navigateur sur le build (preview requis)
+npm run check:dist      # vérifie que dist/ contient toutes les ressources (base /Subway-Surferswebgl/)
+npm run test:e2e        # compile, lance le serveur, exécute les 34 tests navigateur, l'arrête
+npm run shots:compare -- dossier   # captures comparatives (serveur preview sur le port 4173)
 ```
 
-Versions figées : `three@0.170.0`, `vite@5.4.11`, `fflate@0.8.2` (seules dépendances).
+### Tests navigateur (Playwright)
+
+Playwright est une **dépendance de développement** (`playwright@1.63.0`) : il n'est jamais chargé par le jeu.
+Première installation :
+
+```bash
+npm ci
+npx playwright install --with-deps chromium   # navigateur + bibliothèques système (Linux)
+npm run test:e2e
+```
+
+Le rapport est écrit dans `test-results/e2e-report.json`. Chaque vérification en échec produit une capture
+`test-results/echec-NN.png`. Le rendu 3D tourne en logiciel (SwiftShader) : les FPS mesurés ne représentent
+pas un téléphone.
+
+Versions figées : `three@0.170.0`, `fflate@0.8.2`, `@fontsource/orbitron@5.2.8` (jeu) ;
+`vite@5.4.11`, `playwright@1.63.0` (développement).
+
+Navigateur requis : **WebGL 2** (Chrome, Edge, Firefox, Safari 15 ou plus récents). Sans WebGL 2, le jeu
+affiche un message explicatif au lieu d'un écran noir.
 
 ---
 
@@ -198,8 +219,10 @@ Versions figées : `three@0.170.0`, `vite@5.4.11`, `fflate@0.8.2` (seules dépen
    base `main` ← compare `claude/mnnrow-3d-racing-game-d55wdi` → **Create** puis **Merge**.
 2. Une seule fois : **Settings → Pages → Build and deployment → Source : « GitHub Actions »**.
    Si le menu Settings n'apparaît pas sur mobile, active « Version pour ordinateur » dans le navigateur.
-3. Le workflow `.github/workflows/deploy.yml` lance les tests, compile et publie à chaque push sur `main`
-   (onglet **Actions** pour suivre ; relance manuelle possible avec « Run workflow »).
+3. Le workflow `.github/workflows/deploy.yml` s'exécute à chaque push sur `main` :
+   tests de logique → compilation → vérification des chemins de `dist/` → tests navigateur Playwright →
+   **publication seulement si tout est vert**. Les pull requests sont testées sans être publiées.
+   En cas d'échec, l'artefact `e2e-report` contient le rapport et les captures (onglet **Actions**).
 4. Le jeu est servi à `https://giugnothiwane-star.github.io/Subway-Surferswebgl/`.
 
 Si Pages reste réglé sur « Deploy from a branch », GitHub servira les **sources non compilées** : le jeu

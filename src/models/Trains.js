@@ -4,7 +4,7 @@
 // s'étend vers -z. Hauteur du toit = 3.0 m (cohérent avec la collision).
 import * as THREE from 'three';
 import { PartBuilder, RoundedBoxGeometry, capShape, roundedRectProfile, sweep } from './geo.js';
-import { containerTexture, trainFrontTexture, trainRoofTexture, trainSideTexture } from './textures.js';
+import { containerTexture, trainFrontEmissive, trainFrontTexture, trainRoofTexture, trainSideEmissive, trainSideTexture } from './textures.js';
 import { TRAIN } from '../gameplay/constants.js';
 
 const W = TRAIN.width;
@@ -31,6 +31,8 @@ export function trainSharedMaterials() {
     light: sharedMat('TrainLight', { color: 0xffffff, emissive: 0xfff3c8, emissiveIntensity: 2.2 }),
     tail: sharedMat('TrainTail', { color: 0xff2a2a, emissive: 0xff1a1a, emissiveIntensity: 1.6 }),
     rubber: sharedMat('TrainRubber', { color: 0x15161a, roughness: 0.9 }),
+    chrome: sharedMat('TrainChrome', { color: 0xe8edf2, metalness: 1, roughness: 0.18 }),
+    equip: sharedMat('TrainEquip', { color: 0x30343b, metalness: 0.55, roughness: 0.55 }),
     reflector: sharedMat('TrainReflector', { color: 0xffc23d, emissive: 0xff9a00, emissiveIntensity: 0.35, metalness: 0.2, roughness: 0.3 }),
   };
 }
@@ -47,15 +49,18 @@ function liveryMaterials(style, livery) {
     liveryMats.delete(oldKey);
   }
   const nose = style === 'modern' ? 4.2 / CAR : 0;
-  const side = new THREE.MeshStandardMaterial({ map: customTexture || trainSideTexture(style, plain), metalness: 0.35, roughness: 0.4 });
+  // éclairage intérieur visible à travers les vitres (sauf livrée importée :
+  // l'emplacement des fenêtres y est inconnu)
+  const lit = customTexture ? {} : { emissive: 0xffffff, emissiveMap: trainSideEmissive(style), emissiveIntensity: 0.55 };
+  const side = new THREE.MeshStandardMaterial({ map: customTexture || trainSideTexture(style, plain), metalness: 0.45, roughness: 0.32, ...lit });
   side.name = `TrainSide_${style}`;
   const roof = new THREE.MeshStandardMaterial({ map: trainRoofTexture(style, livery.roof || livery.body, nose), metalness: 0.55, roughness: 0.38 });
   roof.name = `TrainRoof_${style}`;
-  const front = new THREE.MeshStandardMaterial({ map: trainFrontTexture(style, livery), metalness: 0.3, roughness: 0.35 });
+  const front = new THREE.MeshStandardMaterial({ map: trainFrontTexture(style, livery), metalness: 0.35, roughness: 0.3, emissive: 0xffffff, emissiveMap: trainFrontEmissive(style, livery), emissiveIntensity: 1 });
   front.name = `TrainFront_${style}`;
   const accent = new THREE.MeshStandardMaterial({ color: livery.accent, emissive: livery.accent, emissiveIntensity: style === 'modern' ? 1.4 : 0.05, metalness: 0.3, roughness: 0.4 });
   accent.name = `TrainAccent_${style}`;
-  const body = new THREE.MeshStandardMaterial({ color: livery.body, metalness: 0.4, roughness: 0.4 });
+  const body = new THREE.MeshStandardMaterial({ color: livery.body, metalness: 0.45, roughness: 0.34 });
   body.name = `TrainBody_${style}`;
   const m = { side, roof, front, accent, body };
   liveryMats.set(key, m);
@@ -106,6 +111,38 @@ function bogie(pb, sm, z, wide = 0.72) {
   for (const sx of [-1, 1]) pb.add(new THREE.BoxGeometry(0.12, 0.3, 0.5), sm.metal, { position: [sx * 0.95, 0.5, z] }); // ressorts / boîtes d'essieu
 }
 
+// Équipements sous caisse entre les bogies (coffres, réservoirs d'air, câbles).
+function underframe(pb, sm, z0, len) {
+  const zs = [0.36, 0.5, 0.64];
+  for (const [i, f] of zs.entries()) {
+    const w = i === 1 ? 1.5 : 1.2;
+    pb.add(new RoundedBoxGeometry(w, 0.36, 1.6, 2, 0.05), sm.equip, { position: [0, 0.36, z0 - len * f] });
+  }
+  for (const sx of [-1, 1]) {
+    pb.add(new THREE.CylinderGeometry(0.16, 0.16, 1.8, 12), sm.metal, { position: [sx * 0.55, 0.36, z0 - len * 0.5], rotation: [Math.PI / 2, 0, 0] });
+    pb.add(new THREE.CylinderGeometry(0.025, 0.025, len - 6.5, 5), sm.dark, { position: [sx * 0.9, 0.5, z0 - len / 2], rotation: [Math.PI / 2, 0, 0] });
+  }
+}
+
+// Pantographe replié (losange) avec isolateurs.
+function pantograph(pb, sm, z) {
+  for (const sx of [-0.35, 0.35]) pb.add(new THREE.CylinderGeometry(0.06, 0.07, 0.16, 8), sm.reflector, { position: [sx, TOP + 0.06, z] });
+  pb.add(new THREE.BoxGeometry(0.9, 0.05, 0.12), sm.equip, { position: [0, TOP + 0.15, z] });
+  const arm = (y, a, dz) => pb.add(new THREE.CylinderGeometry(0.022, 0.022, 0.95, 6), sm.metal, { position: [0, y, z + dz], rotation: [a, 0, 0] });
+  arm(TOP + 0.26, 1.35, -0.45);
+  arm(TOP + 0.26, -1.35, 0.45);
+  pb.add(new THREE.BoxGeometry(1.2, 0.035, 0.08), sm.chrome, { position: [0, TOP + 0.36, z] });
+  for (const sx of [-0.62, 0.62]) pb.add(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 6), sm.chrome, { position: [sx, TOP + 0.33, z], rotation: [0, 0, Math.PI / 2] });
+}
+
+// Rétroviseurs / caméras latérales à l'avant.
+function mirrors(pb, sm, z) {
+  for (const sx of [-1, 1]) {
+    pb.add(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 5), sm.dark, { position: [sx * 1.2, 2.25, z - 0.25], rotation: [0, 0, Math.PI / 2] });
+    pb.add(new RoundedBoxGeometry(0.1, 0.22, 0.14, 1, 0.03), sm.dark, { position: [sx * 1.32, 2.25, z - 0.25] });
+  }
+}
+
 function roofDetails(pb, sm, z0, len, style) {
   if (style === 'modern') {
     pb.add(new RoundedBoxGeometry(1.2, 0.07, len * 0.55, 2, 0.03), sm.metal, { position: [0, TOP - 0.02, z0 - len * 0.55] });
@@ -153,7 +190,9 @@ function urbanCar(pb, mats, sm, z0, isFront, isLast, livery) {
   bogie(pb, sm, z0 - 2.6);
   bogie(pb, sm, z0 - CAR + 2.6);
   roofDetails(pb, sm, z0, CAR, 'urban');
-  if (isFront) flatFront(pb, mats, sm, z0, livery);
+  underframe(pb, sm, z0, CAR);
+  if (isFront) pantograph(pb, sm, z0 - CAR * 0.5);
+  if (isFront) { flatFront(pb, mats, sm, z0, livery); mirrors(pb, sm, z0); }
   else pb.add(capShape(outline(), z0, 1), mats.body);
   backCap(pb, mats, sm, z0 - CAR, isLast);
   // bandes réfléchissantes basses
@@ -190,6 +229,9 @@ function modernCar(pb, mats, sm, z0, isFront, isLast, livery) {
   bogie(pb, sm, z0 - 3.0);
   bogie(pb, sm, z0 - CAR + 2.6);
   roofDetails(pb, sm, z0, CAR, 'modern');
+  // jupes latérales aérodynamiques (cachent les équipements)
+  for (const sx of [-1, 1]) pb.add(new RoundedBoxGeometry(0.06, 0.32, CAR - 6.4, 1, 0.02), mats.body, { position: [sx * 1.08, 0.5, z0 - CAR / 2 - (isFront ? 0.4 : 0)] });
+  if (!isFront) pantograph(pb, sm, z0 - CAR * 0.5);
   // filet lumineux latéral
   for (const sx of [-1, 1]) pb.add(new THREE.BoxGeometry(0.03, 0.04, CAR - (isFront ? 4.6 : 0.4)), mats.accent, { position: [sx * 1.16, 1.05, z0 - (isFront ? 4.4 : 0.2) - (CAR - (isFront ? 4.6 : 0.4)) / 2] });
   backCap(pb, mats, sm, z0 - CAR, isLast);
@@ -241,6 +283,10 @@ function containerWagon(pb, sm, z0, color, isLast, mats) {
   for (let i = 0; i <= 8; i++) {
     for (const sx of [-1, 1]) pb.add(new THREE.BoxGeometry(0.04, 2.27, 0.08), sm.metal, { position: [sx * 1.16, 0.73 + 2.27 / 2, z0 - 0.6 - i * ((len - 1.2) / 8)] });
   }
+  // pièces de coin ISO + échelle d'accès + attelage
+  for (const sx of [-1, 1]) for (const zz of [z0 - 0.6, z0 - len + 0.6]) for (const yy of [0.78, TOP - 0.08]) pb.add(new THREE.BoxGeometry(0.16, 0.14, 0.16), sm.equip, { position: [sx * 1.1, yy, zz] });
+  ladder(pb, sm, 1.08, z0 - 0.35, 0.8, 2.2);
+  coupler(pb, sm, z0);
   // portes à l'avant (barres de verrouillage)
   for (const sx of [-0.5, -0.2, 0.2, 0.5]) pb.add(new THREE.CylinderGeometry(0.025, 0.025, 2.1, 6), sm.metal, { position: [sx, 1.85, z0 - 0.58] });
   pb.add(new THREE.BoxGeometry(2.32, 0.06, len - 1.18), sm.metal, { position: [0, TOP - 0.03, z0 - len / 2] });
@@ -258,6 +304,22 @@ function tankWagon(pb, sm, z0, color) {
   pb.add(new THREE.CylinderGeometry(0.35, 0.35, 0.04, 16), sm.metal, { position: [0, TOP - 0.01, z0 - len / 2] });
   for (const f of [0.25, 0.5, 0.75]) pb.add(new THREE.TorusGeometry(r + 0.01, 0.03, 6, 28), sm.dark, { position: [0, TOP - r, z0 - len * f], scale: [1, 1, 1] });
   for (const sx of [-1, 1]) pb.add(new THREE.BoxGeometry(0.05, 0.05, len - 2.5), sm.reflector, { position: [sx * 1.15, TOP - r, z0 - len / 2] });
+  // passerelle de toit, garde-corps, échelle, vannes de vidange
+  pb.add(new THREE.BoxGeometry(0.5, 0.03, 2.4), sm.equip, { position: [0, TOP + 0.01, z0 - len / 2] });
+  for (const sx of [-0.3, 0.3]) pb.add(new THREE.CylinderGeometry(0.015, 0.015, 2.4, 5), sm.reflector, { position: [sx, TOP + 0.3, z0 - len / 2], rotation: [Math.PI / 2, 0, 0] });
+  ladder(pb, sm, 1.0, z0 - len / 2 + 1.0, 0.75, 2.1);
+  for (const sx of [-1, 1]) pb.add(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 8), sm.equip, { position: [sx * 0.4, 0.5, z0 - len / 2] });
+  coupler(pb, sm, z0);
+}
+
+function ladder(pb, sm, x, z, y0, y1) {
+  for (const dz of [-0.18, 0.18]) pb.add(new THREE.CylinderGeometry(0.018, 0.018, y1 - y0, 5), sm.reflector, { position: [x, (y0 + y1) / 2, z + dz] });
+  for (let y = y0 + 0.15; y < y1; y += 0.28) pb.add(new THREE.CylinderGeometry(0.014, 0.014, 0.36, 5), sm.reflector, { position: [x, y, z], rotation: [Math.PI / 2, 0, 0] });
+}
+
+function coupler(pb, sm, z0) {
+  pb.add(new THREE.BoxGeometry(0.22, 0.18, 0.5), sm.equip, { position: [0, 0.62, z0 + 0.05] });
+  pb.add(new THREE.CylinderGeometry(0.12, 0.12, 0.2, 10), sm.metal, { position: [0, 0.62, z0 + 0.3], rotation: [Math.PI / 2, 0, 0] });
 }
 const tankMats = new Map();
 function cargoTankMat(color) {
