@@ -10,8 +10,8 @@
 // dérivée de son code. Sans ce jeton, connaître ou deviner le code ne permet
 // de rien publier.
 
-const CODE_SALT = 'ad95e0f72fcfa6898b7143f58df0afbe';
-const CODE_HASH = 'abf4ccf5a9bd591b34de8aff292aed07550a1a09a04f11a87daf851178d90c33';
+const CODE_SALT = '72074593cea506fb8bf3e3412202892f';
+const CODE_HASH = '78d6d404732832c079af6572e2cb0160cc7e56092f268138be2c30ab2cd351ca';
 const ITER = 400000;
 const LS_TOKEN = 'mnnrow_owner_token';
 const LS_LOCK = 'mnnrow_owner_lock';
