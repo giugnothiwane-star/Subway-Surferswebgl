@@ -172,9 +172,13 @@ const GLSL_COLOR = /* glsl */ `
   #elif SKIN_MODE == 3
     // GLACE : bleu pâle givré + éclats
     float n = skFbm(p * 3.0);
-    vec3 col = mix(vec3(0.55, 0.78, 0.95), vec3(0.92, 0.98, 1.0), smoothstep(0.35, 0.8, n));
+    // fissures de glace (lignes de cellules) + givre
+    vec3 cg = abs(fract(p * 2.2 + n * 0.6) - 0.5);
+    float crack = smoothstep(0.46, 0.5, max(cg.x, max(cg.y, cg.z)));
+    vec3 col = mix(vec3(0.18, 0.45, 0.78), vec3(0.62, 0.86, 1.0), smoothstep(0.3, 0.85, n));
+    col = mix(col, vec3(0.95, 0.99, 1.0), crack * 0.8);
     float st = skStars(p * 24.0, 0.25) * (0.6 + 0.4 * sin(t * 2.0));
-    skCol = col + st; skEmi = vec3(0.08, 0.14, 0.2) + vec3(st) * 0.8;
+    skCol = col + st; skEmi = vec3(0.04, 0.12, 0.22) + vec3(0.5, 0.8, 1.0) * crack * 0.25 + vec3(st) * 0.8;
   #elif SKIN_MODE == 4
     // ARC-EN-CIEL : teintes qui défilent
     float n = skFbm(p * 1.5);
@@ -200,10 +204,14 @@ const GLSL_COLOR = /* glsl */ `
     skEmi = uSkinTint * (line * 2.2 + 0.08);
   #elif SKIN_MODE == 8
     // CRISTAL : facettes claires (version optimisée, sans réfraction réelle)
-    float n = skNoise(floor(p * 5.0));
-    skCol = mix(vec3(0.7, 0.85, 1.0), vec3(0.95, 0.85, 1.0), n);
-    skEmi = vec3(0.05, 0.08, 0.12) + skCol * 0.15 * n;
-    skAlpha = 0.72;
+    // facettes : cellules de couleur légèrement différentes, arêtes brillantes
+    vec3 fp = p * 4.0;
+    float n = skNoise(floor(fp));
+    vec3 fg = abs(fract(fp) - 0.5);
+    float edge = smoothstep(0.44, 0.5, max(fg.x, max(fg.y, fg.z)));
+    skCol = mix(vec3(0.2, 0.55, 1.0), vec3(0.7, 0.3, 1.0), n);
+    skEmi = skCol * (0.35 + 0.3 * n) + vec3(0.85, 0.95, 1.0) * edge * 0.6;
+    skAlpha = 0.8;
   #elif SKIN_MODE == 9
     // TEXTURE PERSONNALISÉE : projection triplanaire (aucun étirement)
     vec3 bw = abs(normalize(vSkinNormal)); bw = pow(bw, vec3(4.0)); bw /= (bw.x + bw.y + bw.z);
@@ -224,7 +232,7 @@ const PBR = {
   neon: { metalness: 0.2, roughness: 0.35 },
   gold: { color: 0xffc23a, metalness: 1, roughness: 0.18, emissive: 0x2a1800, emissiveIntensity: 0.4 },
   silver: { color: 0xe6ebf2, metalness: 1, roughness: 0.16 },
-  crystal: { metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.85 },
+  crystal: { metalness: 0, roughness: 0.04, transparent: true, opacity: 1 },
   fire: { metalness: 0, roughness: 0.6 },
   ice: { metalness: 0.15, roughness: 0.12 },
   rainbow: { metalness: 0.35, roughness: 0.3 },
@@ -275,7 +283,7 @@ export function skinMaterial(skin, opts = {}) {
           totalEmissiveRadiance = skEmi;
           #if SKIN_MODE == 8
             float skFres = pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 2.5);
-            totalEmissiveRadiance += vec3(0.6, 0.85, 1.0) * skFres * 0.8;
+            totalEmissiveRadiance += vec3(0.7, 0.9, 1.0) * skFres * 1.3;
           #elif SKIN_MODE == 1 || SKIN_MODE == 7 || SKIN_MODE == 6
             float skFres = pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0);
             totalEmissiveRadiance += (SKIN_MODE == 7 ? uSkinTint : (SKIN_MODE == 6 ? vec3(0.35, 0.1, 0.6) : uGalC)) * skFres * 0.5;

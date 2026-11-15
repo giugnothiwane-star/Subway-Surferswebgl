@@ -461,7 +461,7 @@ export class Game {
     }
     this.orbit.enabled = true;
     const portrait = this.rig.aspect < 0.8;
-    this.rig.viewShift(portrait ? 0.24 : 0, portrait ? 0 : 0.17);
+    this.rig.viewShift(portrait ? 0.13 : 0, portrait ? 0 : 0.17);
     this.setStudioSubject(subject);
   }
 
@@ -478,17 +478,17 @@ export class Game {
     this.player.group.visible = subject === 'character' || subject === 'board' || subject === 'cape';
     this.menuAnim = subject === 'board' ? 'hoverboard' : 'idle';
     let target = new THREE.Vector3(0, 0.95, 0);
-    let dist = this.rig.aspect < 0.8 ? 6.2 : 4.6;
+    let dist = this.rig.aspect < 0.8 ? 6.8 : 4.6;
     if (subject === 'coin') {
       // même usine de matériaux que le jeu : l'aperçu montre exactement le rendu en course
       const cfg = { ...this.save.skins.coin, tint: this.save.studio.coinTint };
       const coin = buildCoinPreview(cfg, this.custom.coinTexture, this.save.studio.coinGlow);
-      coin.scale.setScalar(2.2);
+      coin.scale.setScalar(1.7);
       this.studioGlow = coin.userData.glowMaterial || null;
-      coin.position.set(0, 1.2, 0);
+      coin.position.set(0, 1.5, 0);
       this.studioObject = coin;
-      target.set(0, 1.2, 0);
-      dist = 5;
+      target.set(0, 1.1, 0);
+      dist = this.rig.aspect < 0.8 ? 6.5 : 5;
     } else if (subject === 'train') {
       const l = this.save.studio.trainLivery;
       const base = (this.map.trains.liveries.urban || Object.values(this.map.trains.liveries)[0])[0];
@@ -506,7 +506,7 @@ export class Game {
     }
     this.orbit.target.copy(target);
     const dir = subject === 'cape' ? new THREE.Vector3(0.45, 0.3, -1).normalize() : new THREE.Vector3(0.6, 0.35, 1).normalize();
-    if (subject === 'cape') { target.set(0, 1.15, 0); dist = 4.2; }
+    if (subject === 'cape') { target.set(0, 0.95, 0); dist = this.rig.aspect < 0.8 ? 6.8 : 4.8; }
     this.rig.camera.position.copy(target).addScaledVector(dir, dist);
     this.rig.camera.fov = 45;
     this.rig.camera.updateProjectionMatrix();

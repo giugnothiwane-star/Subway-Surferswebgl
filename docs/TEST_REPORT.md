@@ -111,6 +111,19 @@ Ces correctifs s'ajoutent aux améliorations de la même session :
 
 Résultat : **25/25 tests Node** et **28/28 vérifications navigateur**.
 
+### Moteur de skins (Galaxie)
+
+Le registre complet des bugs se trouve dans [`BUGS.md`](BUGS.md).
+
+- **Tests Node** (`tests/skins.test.js`) :
+  - Galaxie complète : le `SkinnedMesh` est conservé et la restauration est exacte ;
+  - mode Vêtements ;
+  - bouton Galaxie sans les trains ;
+  - validation de la sauvegarde.
+- **Test navigateur** : équipement complet en Galaxie, trains intacts (12 matériaux), conservé après changement de carte et rechargement.
+- **Scènes de contrôle avec captures** : les 10 objets du chapitre 23, les 12 skins, les images de pièces (rectangulaire, transparente, contenir, couvrir, zoom, rotation, dos lisible) et la qualité LOW.
+- **Cape en course** : 14 échantillons pendant sauts et roulades, sans valeur NaN, toujours attachée.
+
 ## 3. Ce qui n'a PAS pu être testé ici
 
 - **Téléphone Android réel** : performances, chaleur, gestes, Samsung Internet. Aucun appareil disponible.
